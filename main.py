@@ -1,14 +1,24 @@
+import json
+from dataclasses import dataclass
 from pathlib import Path
 
 DB_FILE = Path("journal.json")
 DB_FILE.touch(exist_ok=True)
 
+
 # 📝 Define a JournalEntry class with title, content, and date
+@dataclass
+class JournalEntry:
+    title: str
+    content: str
+    # date: str
 
 
 def load_entries():
     """Load journal entries from the JSON file."""
-    pass
+    with open(DB_FILE, mode="r", encoding="utf-8") as read_file:
+        entry = json.load(read_file)
+    print(f'Title: {entry["title"]}')
 
 
 def save_entries(entries):
@@ -18,7 +28,9 @@ def save_entries(entries):
 
 def add_entry(title, content):
     """Create a new journal entry and save it to the JSON file."""
-    pass
+    new_journal_entry = JournalEntry(title, content)
+    with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
+        json.dump(vars(new_journal_entry), write_file)
 
 
 def list_entries(entries):
@@ -33,4 +45,5 @@ if __name__ == "__main__":
     add_entry(title, content)
     print("✅ Entry saved.")
     print("\n📘 Your Journal:")
-    list_entries(load_entries())
+    # list_entries(load_entries())
+    load_entries()
