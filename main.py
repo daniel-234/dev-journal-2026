@@ -1,3 +1,4 @@
+import datetime
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,40 +12,44 @@ DB_FILE.touch(exist_ok=True)
 class JournalEntry:
     title: str
     content: str
-    # date: str
+    timestamp: str
 
 
 def load_entries():
     """Load journal entries from the JSON file."""
     with open(DB_FILE, mode="r") as read_file:
         try:
-            entries = json.load(read_file)
+            journal_entries = json.load(read_file)
         except json.decoder.JSONDecodeError:
-            entries = {}
-    return entries
+            journal_entries = {"entries": []}
+    return journal_entries
 
 
 def save_entries(entry):
     """Save journal entries to the JSON file."""
     journal_entries = load_entries()
-    journal_entries.update({entry.title: entry.content})
+    print("jjj", journal_entries)
+    journal_entries["entries"].append(
+        {"Title": entry.title, "Content": entry.content, "Date": entry.timestamp}
+    )
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         json.dump(journal_entries, write_file)
 
 
 def add_entry(title, content):
     """Create a new journal entry and save it to the JSON file."""
-    new_journal_entry = JournalEntry(title, content)
+    dt = datetime.datetime.now()
+    timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+    new_journal_entry = JournalEntry(title, content, timestamp)
     save_entries(new_journal_entry)
 
 
 def list_entries(entries):
     """Print all journal entries to the console."""
-    keys = list(entries.keys())
     count = 1
-    for key in keys:
-        print(f"{count}. {key}")
-        print(f"{entries[key]}\n")
+    for entry in entries["entries"]:
+        print(f"{count}. {entry['Title']}  ({entry['Date']})")
+        print(f"{entry['Content']}\n")
         count += 1
 
 
