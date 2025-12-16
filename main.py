@@ -40,7 +40,12 @@ def add_entry(title, content):
 
 def list_entries(entries):
     """Print all journal entries to the console."""
-    pass
+    keys = list(entries.keys())
+    count = 1
+    for key in keys:
+        print(f"{count}. {key}")
+        print(f"{entries[key]}\n")
+        count += 1
 
 
 if __name__ == "__main__":
@@ -50,6 +55,4 @@ if __name__ == "__main__":
     add_entry(title, content)
     print("✅ Entry saved.")
     print("\n📘 Your Journal:")
-    # list_entries(load_entries())
-
-    print(load_entries())
+    list_entries(load_entries())
