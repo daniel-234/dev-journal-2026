@@ -12,7 +12,7 @@ DB_FILE.touch(exist_ok=True)
 class JournalEntry:
     title: str
     content: str
-    timestamp: str
+    timestamp: datetime
 
 
 def load_entries():
@@ -21,16 +21,21 @@ def load_entries():
         try:
             journal_entries = json.load(read_file)
         except json.decoder.JSONDecodeError:
-            journal_entries = {"entries": []}
+            journal_entries = []
+        except FileNotFoundError:
+            journal_entries = []
     return journal_entries
 
 
 def save_entries(entry):
     """Save journal entries to the JSON file."""
     journal_entries = load_entries()
-    print("jjj", journal_entries)
-    journal_entries["entries"].append(
-        {"Title": entry.title, "Content": entry.content, "Date": entry.timestamp}
+    journal_entries.append(
+        {
+            "Title": entry.title,
+            "Content": entry.content,
+            "Date": entry.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+        }
     )
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         json.dump(journal_entries, write_file)
@@ -38,16 +43,14 @@ def save_entries(entry):
 
 def add_entry(title, content):
     """Create a new journal entry and save it to the JSON file."""
-    dt = datetime.datetime.now()
-    timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.datetime.now()
     new_journal_entry = JournalEntry(title, content, timestamp)
     save_entries(new_journal_entry)
 
 
 def list_entries(entries):
     """Print all journal entries to the console."""
-    count = 1
-    for entry in entries["entries"]:
+    for count, entry in enumerate(entries, start=1):
         print(f"{count}. {entry['Title']}  ({entry['Date']})")
         print(f"{entry['Content']}\n")
         count += 1
