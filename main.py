@@ -19,7 +19,10 @@ class JournalEntry:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-def load_entries():
+JournalEntries = list[JournalEntry]
+
+
+def load_entries() -> JournalEntries:
     """Load journal entries from the JSON file."""
     with open(DB_FILE, mode="r") as read_file:
         try:
@@ -29,7 +32,7 @@ def load_entries():
     return journal_entries
 
 
-def save_entries(entry):
+def save_entries(entry: JournalEntry) -> None:
     """Save journal entries to the JSON file."""
     journal_entries = load_entries()
     journal_entries.append(
@@ -43,14 +46,14 @@ def save_entries(entry):
         json.dump(journal_entries, write_file)
 
 
-def add_entry(title, content):
+def add_entry(title: str, content: str) -> None:
     """Create a new journal entry and save it to the JSON file."""
     # timestamp = datetime.datetime.now()
     new_journal_entry = JournalEntry(title, content)  # , timestamp)
     save_entries(new_journal_entry)
 
 
-def list_entries(entries):
+def list_entries(entries: JournalEntries) -> None:
     """Print all journal entries to the console."""
     for count, entry in enumerate(entries, start=1):
         print(f"{count}. {entry['Title']}  ({entry['Date']})")
