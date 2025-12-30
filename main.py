@@ -19,7 +19,16 @@ class JournalEntry:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-JournalEntries = list[JournalEntry]
+JournalEntries = list[dict]
+
+
+def journalEntryToJSON(entry: JournalEntry) -> dict:
+    """Convert a JournalEntry object to JSON"""
+    return {
+        "Title": entry.title,
+        "Content": entry.content,
+        "Date": entry.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+    }
 
 
 def load_entries() -> JournalEntries:
@@ -34,30 +43,27 @@ def load_entries() -> JournalEntries:
 
 def save_entries(entry: JournalEntry) -> None:
     """Save journal entries to the JSON file."""
+    # Load the JSON content as a list of dictionaries
     journal_entries = load_entries()
-    journal_entries.append(
-        {
-            "Title": entry.title,
-            "Content": entry.content,
-            "Date": entry.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-    )
+    # Append the entry object to the list, after converting
+    # it to a dictionary
+    journal_entries.append(journalEntryToJSON(entry))
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         json.dump(journal_entries, write_file)
 
 
 def add_entry(title: str, content: str) -> None:
     """Create a new journal entry and save it to the JSON file."""
-    # timestamp = datetime.datetime.now()
-    new_journal_entry = JournalEntry(title, content)  # , timestamp)
+    new_journal_entry = JournalEntry(title, content)
     save_entries(new_journal_entry)
 
 
 def list_entries(entries: JournalEntries) -> None:
     """Print all journal entries to the console."""
     for count, entry in enumerate(entries, start=1):
-        print(f"{count}. {entry['Title']}  ({entry['Date']})")
-        print(f"{entry['Content']}\n")
+        print(f"Entry: {entry}")
+        print(f"{count}. {entry.get("Title")}  ({entry.get("Date")})")
+        print(f"{entry.get("Content")}\n")
 
 
 if __name__ == "__main__":
