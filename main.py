@@ -3,8 +3,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+import typer
+
 DB_FILE = Path("journal.json")
 DB_FILE.touch(exist_ok=True)
+
+app = typer.Typer()
 
 
 # 📝 Define a JournalEntry class with title, content, and date
@@ -35,8 +39,10 @@ def load_entries() -> JournalEntries:
     """Load journal entries from the JSON file."""
     with open(DB_FILE, mode="r") as read_file:
         try:
+            # Load the entries from the Dev Journal
             journal_entries = json.load(read_file)
         except (json.decoder.JSONDecodeError, FileNotFoundError):
+            # Create an empty list if the journal is still empty
             journal_entries = []
     return journal_entries
 
@@ -52,21 +58,29 @@ def save_entries(entry: JournalEntry) -> None:
         json.dump(journal_entries, write_file)
 
 
+@app.command()
 def add_entry(title: str, content: str) -> None:
     """Create a new journal entry and save it to the JSON file."""
     new_journal_entry = JournalEntry(title, content)
     save_entries(new_journal_entry)
 
 
-def list_entries(entries: JournalEntries) -> None:
+@app.command()
+def list_entries() -> None:
     """Print all journal entries to the console."""
+    # Load entries
+    entries = load_entries()
+    # Print a message to the user to let know there's no entry yet
+    if entries == []:
+        print("No entries yet in Dev Journal.")
     for count, entry in enumerate(entries, start=1):
-        print(f"Entry: {entry}")
         print(f"{count}. {entry.get("Title")}  ({entry.get("Date")})")
         print(f"{entry.get("Content")}\n")
 
 
 if __name__ == "__main__":
+    app()
+    """
     # quick interactive program (entry point) to validate the above
     title = input("Title: ")
     content = input("Content: ")
@@ -74,3 +88,4 @@ if __name__ == "__main__":
     print("✅ Entry saved.")
     print("\n📘 Your Journal:")
     list_entries(load_entries())
+    """
