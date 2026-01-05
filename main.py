@@ -101,6 +101,29 @@ def list_entries() -> None:
 
 
 @app.command()
+def edit_entry(title: str, new_content: str) -> None | str:
+    """Edit an entry content given its title. If title is not found,
+    print a message to the user."""
+    # Load the entries from the dev journal, if any.
+    journal_entries = load_entries()
+    # Iterate through the dictionaries in the journal_entries list.
+    # Check if the title passed by the user is found in an entry value.
+    if not any(title in entry.get("Title") for entry in journal_entries):
+        # If title is not part of an entry, print a message to the screen.
+        print("No entry was found with this title")
+    else:
+        # Check each entry dictionary in the list.
+        for entry in journal_entries:
+            # If the title of the current entry is the same as the one
+            # typed by the user, update the content of this entry.
+            if entry["Title"] == title:
+                entry["Content"] = new_content
+        # Open the JSON file and save the updated content.
+        with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
+            json.dump(journal_entries, write_file)
+
+
+@app.command()
 def populate_journal() -> None:
     fake = Faker()
     Faker.seed(0)
