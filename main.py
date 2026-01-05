@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import typer
+from faker import Faker
 
 DB_FILE = Path("journal.json")
 DB_FILE.touch(exist_ok=True)
@@ -34,10 +35,10 @@ class JournalEntry:
 
     # Check if title or content length are too long at construction
     def __post_init__(self):
-        if len(self.title) > 20:
-            raise TitleTooLongException("Title must not exceed 20 charatcers.")
-        if len(self.content) > 50:
-            raise ContentTooLongException("Content must not exceed 50 characters.")
+        if len(self.title) > 30:
+            raise TitleTooLongException("Title must not exceed 30 charatcers.")
+        if len(self.content) > 70:
+            raise ContentTooLongException("Content must not exceed 70 characters.")
 
 
 JournalEntries = list[dict]
@@ -100,4 +101,8 @@ def list_entries() -> None:
 
 
 if __name__ == "__main__":
+    fake = Faker()
+    Faker.seed(0)
+    for _ in range(5):
+        add_entry(fake.company(), fake.catch_phrase())
     app()
