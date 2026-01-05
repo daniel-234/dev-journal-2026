@@ -100,9 +100,13 @@ def list_entries() -> None:
         print(f"{entry.get("Content")}\n")
 
 
-if __name__ == "__main__":
+@app.command()
+def populate_journal() -> None:
     fake = Faker()
     Faker.seed(0)
     for _ in range(5):
         add_entry(fake.company(), fake.catch_phrase())
+
+
+if __name__ == "__main__":
     app()
