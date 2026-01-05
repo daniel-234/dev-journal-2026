@@ -125,6 +125,7 @@ def edit_entry(title: str, new_content: str) -> None | str:
 
 @app.command()
 def populate_journal() -> None:
+    """Populate the journal with fake content."""
     fake = Faker()
     Faker.seed(0)
     for _ in range(5):
