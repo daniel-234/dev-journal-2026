@@ -11,6 +11,16 @@ DB_FILE.touch(exist_ok=True)
 app = typer.Typer()
 
 
+# Define a custom exception to handle char limit on title
+class TitleTooLongException(Exception):
+    """Title longer than 20 characters"""
+
+
+# Define a custom exception to handle char limit on content
+class ContentTooLongException(Exception):
+    """Content longer than 50 characters"""
+
+
 # 📝 Define a JournalEntry class with title, content, and date
 @dataclass
 class JournalEntry:
@@ -21,6 +31,13 @@ class JournalEntry:
     # that needs to be computed dynamically, such as a timestamp.
     # Use an anonymous inline lambda function to compute the timestamp.
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # Check if title or content length are too long at construction
+    def __post_init__(self):
+        if len(self.title) > 20:
+            raise TitleTooLongException("Title must not exceed 20 charatcers.")
+        if len(self.content) > 50:
+            raise ContentTooLongException("Content must not exceed 50 characters.")
 
 
 JournalEntries = list[dict]
@@ -61,7 +78,11 @@ def save_entries(entry: JournalEntry) -> None:
 @app.command()
 def add_entry(title: str, content: str) -> None:
     """Create a new journal entry and save it to the JSON file."""
-    new_journal_entry = JournalEntry(title, content)
+    try:
+        new_journal_entry = JournalEntry(title, content)
+    except TypeError:
+        if not title or content:
+            raise ValueError("Please, intert a title and the content.")
     save_entries(new_journal_entry)
 
 
@@ -80,12 +101,3 @@ def list_entries() -> None:
 
 if __name__ == "__main__":
     app()
-    """
-    # quick interactive program (entry point) to validate the above
-    title = input("Title: ")
-    content = input("Content: ")
-    add_entry(title, content)
-    print("✅ Entry saved.")
-    print("\n📘 Your Journal:")
-    list_entries(load_entries())
-    """
