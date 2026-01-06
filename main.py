@@ -25,6 +25,20 @@ class ContentTooLongException(Exception):
 # 📝 Define a JournalEntry class with title, content, and date
 @dataclass
 class JournalEntry:
+    """ "
+    Represents an entry to the journal.
+
+    Attributes
+    __________
+
+    title: str
+        The title of the entry.
+    content: str
+        The content of the entry.
+    timestamp: datetime
+        The timestamp of the entry.
+    """
+
     title: str
     content: str
     # The 'field' function allows more control over a field definition.
@@ -45,7 +59,15 @@ JournalEntries = list[dict]
 
 
 def journalEntryToJSON(entry: JournalEntry) -> dict:
-    """Convert a JournalEntry object to JSON"""
+    """
+    Convert a JournalEntry object to JSON to store it in the journal JSON file.
+
+    Args:
+        entry (JournalEntry): An object of the class JournalEntry.
+
+    Returns:
+        dict: A JournalEntry object converted to a dictionary
+    """
     return {
         "Title": entry.title,
         "Content": entry.content,
@@ -54,7 +76,19 @@ def journalEntryToJSON(entry: JournalEntry) -> dict:
 
 
 def load_entries() -> JournalEntries:
-    """Load journal entries from the JSON file."""
+    """
+    Load journal entries from the JSON file.
+
+    Args:
+        None
+
+    Returns:
+        list(dict): a list of entries.
+
+    Raises:
+        JSONDecodeError: If the data being deserialized is not valid JSON.
+        FileNotFoundError: If a JSON file has not yet been created.
+    """
     with open(DB_FILE, mode="r") as read_file:
         try:
             # Load the entries from the Dev Journal
@@ -66,7 +100,15 @@ def load_entries() -> JournalEntries:
 
 
 def save_entries(entry: JournalEntry) -> None:
-    """Save journal entries to the JSON file."""
+    """
+    Save journal entries to the JSON file.
+
+    Args:
+        entry (JournalEntry): An object of the class JournalEntry.
+
+    Returns:
+        None
+    """
     # Load the JSON content as a list of dictionaries
     journal_entries = load_entries()
     # Append the entry object to the list, after converting
@@ -78,7 +120,19 @@ def save_entries(entry: JournalEntry) -> None:
 
 @app.command()
 def add_entry(title: str, content: str) -> None:
-    """Create a new journal entry and save it to the JSON file."""
+    """
+    Create a new journal entry and save it to the JSON file.
+
+    Args:
+        title (str): The title of the entry to add.
+        content (str): The content of the entry to add.
+
+    Returns:
+        None
+
+    Raises:
+        TypeError: If at least one argument is missing.
+    """
     try:
         new_journal_entry = JournalEntry(title, content)
     except TypeError:
@@ -89,7 +143,15 @@ def add_entry(title: str, content: str) -> None:
 
 @app.command()
 def list_entries() -> None:
-    """Print all journal entries to the console."""
+    """
+    Print all journal entries to the console.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     # Load entries
     entries = load_entries()
     # Print a message to the user to let know there's no entry yet
@@ -102,8 +164,17 @@ def list_entries() -> None:
 
 @app.command()
 def edit_entry(title: str, new_content: str) -> None | str:
-    """Edit an entry content given its title. If title is not found,
-    print a message to the user."""
+    """
+    Edit an entry content given its title.
+
+    Args:
+        title (str): The title of the entry the user wants to edit.
+        new_content (str): The content to edit.
+
+    Returns:
+        None | str: If title is not found in the journal, print a message
+                    to the user; otherwise don't return anything.
+    """
     # Load the entries from the dev journal, if any.
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
@@ -125,8 +196,16 @@ def edit_entry(title: str, new_content: str) -> None | str:
 
 @app.command()
 def delete_entry(title: str) -> None | str:
-    """Delete an entry given its title. If title is not found,
-    print a message to the user."""
+    """
+    Delete an entry given its title.
+
+    Args:
+        title (str): The title of the entry to delete.
+
+    Returns:
+        None | str: If title is not in the journal, print a message
+                    to inform the user; don't return anything otherwise.
+    """
     # Load the entries from the dev journal, if any.
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
@@ -148,7 +227,15 @@ def delete_entry(title: str) -> None | str:
 
 @app.command()
 def populate_journal() -> None:
-    """Populate the journal with fake content."""
+    """
+    Populate the journal with fake content.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
     fake = Faker()
     Faker.seed(0)
     for _ in range(5):
