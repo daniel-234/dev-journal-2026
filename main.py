@@ -26,18 +26,8 @@ class ContentTooLongException(Exception):
 # 📝 Define a JournalEntry class with title, content, and date
 @dataclass
 class JournalEntry:
-    """ "
+    """
     Represents an entry to the journal.
-
-    Attributes
-    __________
-
-    title: str
-        The title of the entry.
-    content: str
-        The content of the entry.
-    timestamp: datetime
-        The timestamp of the entry.
     """
 
     title: str
@@ -63,7 +53,7 @@ class JournalEntry:
 JournalEntries = list[dict]
 
 
-def journalEntryToJSON(entry: JournalEntry) -> dict:
+def journal_entry_to_JSON(entry: JournalEntry) -> dict:
     """
     Convert a JournalEntry object to JSON to store it in the journal JSON file.
 
@@ -118,7 +108,7 @@ def save_entries(entry: JournalEntry) -> None:
     journal_entries = load_entries()
     # Append the entry object to the list, after converting
     # it to a dictionary
-    journal_entries.append(journalEntryToJSON(entry))
+    journal_entries.append(journal_entry_to_JSON(entry))
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         json.dump(journal_entries, write_file)
 
@@ -138,11 +128,12 @@ def add_entry(title: str, content: str) -> None:
     Raises:
         TypeError: If at least one argument is missing.
     """
+    if not title or not content:
+        raise ValueError("Please, intert a title and the content.")
     try:
         new_journal_entry = JournalEntry(title, content)
     except TypeError:
-        if not title or content:
-            raise ValueError("Please, intert a title and the content.")
+        print("Please, insert a title and the content in your journal entry.")
     save_entries(new_journal_entry)
 
 
@@ -160,7 +151,7 @@ def list_entries() -> None:
     # Load entries
     entries = load_entries()
     # Print a message to the user to let know there's no entry yet
-    if entries == []:
+    if not entries:
         print("No entries yet in Dev Journal.")
     for count, entry in enumerate(entries, start=1):
         print(f"{count}. {entry.get("Title")}  ({entry.get("Date")})")
