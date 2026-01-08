@@ -70,6 +70,20 @@ def journal_entry_to_JSON(entry: JournalEntry) -> dict:
     }
 
 
+def save_entries(entries: JournalEntries) -> None:
+    """
+    Save entries to the JSON file.
+
+    Args:
+        entries (JournalEntries): A list of entries
+
+    Returns:
+        None
+    """
+    with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
+        json.dump(entries, write_file)
+
+
 def load_entries() -> JournalEntries:
     """
     Load journal entries from the JSON file.
@@ -94,25 +108,6 @@ def load_entries() -> JournalEntries:
     return journal_entries
 
 
-def save_entries(entry: JournalEntry) -> None:
-    """
-    Save journal entries to the JSON file.
-
-    Args:
-        entry (JournalEntry): An object of the class JournalEntry.
-
-    Returns:
-        None
-    """
-    # Load the JSON content as a list of dictionaries
-    journal_entries = load_entries()
-    # Append the entry object to the list, after converting
-    # it to a dictionary
-    journal_entries.append(journal_entry_to_JSON(entry))
-    with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
-        json.dump(journal_entries, write_file)
-
-
 @app.command()
 def add_entry(title: str, content: str) -> None:
     """
@@ -134,7 +129,12 @@ def add_entry(title: str, content: str) -> None:
         new_journal_entry = JournalEntry(title, content)
     except TypeError:
         print("Please, insert a title and the content in your journal entry.")
-    save_entries(new_journal_entry)
+    # Load the JSON content as a list of dictionaries
+    journal_entries = load_entries()
+    # Append the entry object to the list, after converting
+    # it to a dictionary
+    journal_entries.append(journal_entry_to_JSON(new_journal_entry))
+    save_entries(journal_entries)
 
 
 @app.command()
@@ -185,9 +185,7 @@ def edit_entry(title: str, new_content: str) -> None | str:
             # typed by the user, update the content of this entry.
             if entry["Title"] == title:
                 entry["Content"] = new_content
-        # Open the JSON file and save the updated content.
-        with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
-            json.dump(journal_entries, write_file)
+        save_entries(journal_entries)
 
 
 @app.command()
@@ -216,9 +214,7 @@ def delete_entry(title: str) -> None | str:
             # typed by the user, delete this entry from the list.
             if entry["Title"] == title:
                 journal_entries.remove(entry)
-        # Open the JSON file and save the updated content.
-        with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
-            json.dump(journal_entries, write_file)
+        save_entries(journal_entries)
 
 
 @app.command()
