@@ -9,17 +9,18 @@ from faker import Faker
 DB_FILE = Path("journal.json")
 DB_FILE.touch(exist_ok=True)
 
+TITLE_LENGTH = 30
+CONTENT_LENGTH = 70
+
 app = typer.Typer()
 
 
-# Define a custom exception to handle char limit on title
 class TitleTooLongException(Exception):
-    """Title longer than 20 characters"""
+    """Title longer than TITLE_LENGTH characters"""
 
 
-# Define a custom exception to handle char limit on content
 class ContentTooLongException(Exception):
-    """Content longer than 50 characters"""
+    """Content longer than CONTENT_LENGTH characters"""
 
 
 # 📝 Define a JournalEntry class with title, content, and date
@@ -49,10 +50,14 @@ class JournalEntry:
 
     # Check if title or content length are too long at construction
     def __post_init__(self):
-        if len(self.title) > 30:
-            raise TitleTooLongException("Title must not exceed 30 charatcers.")
-        if len(self.content) > 70:
-            raise ContentTooLongException("Content must not exceed 70 characters.")
+        if len(self.title) > TITLE_LENGTH:
+            raise TitleTooLongException(
+                "Title must not exceed TITLE_LENGTH charatcers."
+            )
+        if len(self.content) > CONTENT_LENGTH:
+            raise ContentTooLongException(
+                "Content must not exceed CONTENT_LENGTH characters."
+            )
 
 
 JournalEntries = list[dict]
