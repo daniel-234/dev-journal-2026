@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -36,7 +36,9 @@ class JournalEntry:
     # The 'default_factory' parameter accepts a function that returns an initial value
     # that needs to be computed dynamically, such as a timestamp.
     # Use an anonymous inline lambda function to compute the timestamp.
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(
+        default_factory=lambda: f"{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")}"
+    )
 
     # Check if title or content length are too long at construction
     def __post_init__(self):
@@ -50,27 +52,7 @@ class JournalEntry:
             )
 
 
-JournalEntries = list[dict]
-
-
-def journal_entry_to_JSON(entry: JournalEntry) -> dict:
-    """
-    Convert a JournalEntry object to JSON to store it in the journal JSON file.
-
-    Args:
-        entry (JournalEntry): An object of the class JournalEntry.
-
-    Returns:
-        dict: A JournalEntry object converted to a dictionary
-    """
-    return {
-        "Title": entry.title,
-        "Content": entry.content,
-        "Date": entry.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-    }
-
-
-def save_entries(entries: JournalEntries) -> None:
+def save_entries(entries: list[JournalEntry]) -> None:
     """
     Save entries to the JSON file.
 
@@ -81,10 +63,12 @@ def save_entries(entries: JournalEntries) -> None:
         None
     """
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
-        json.dump(entries, write_file)
+        # Convert each "entry" object to a dictionary to be serializable
+        journal_entries = [asdict(entry) for entry in entries]
+        json.dump(journal_entries, write_file)
 
 
-def load_entries() -> JournalEntries:
+def load_entries() -> list[JournalEntry]:
     """
     Load journal entries from the JSON file.
 
@@ -92,7 +76,7 @@ def load_entries() -> JournalEntries:
         None
 
     Returns:
-        list(dict): a list of entries.
+        list[JournalEntry]: a list of JournalEntry objects.
 
     Raises:
         JSONDecodeError: If the data being deserialized is not valid JSON.
@@ -100,8 +84,8 @@ def load_entries() -> JournalEntries:
     """
     with open(DB_FILE, mode="r") as read_file:
         try:
-            # Load the entries from the Dev Journal
-            journal_entries = json.load(read_file)
+            # Load the entries from the Dev Journal as a list of JournalEntry objects
+            journal_entries = [JournalEntry(**entry) for entry in json.load(read_file)]
         except (json.decoder.JSONDecodeError, FileNotFoundError):
             # Create an empty list if the journal is still empty
             journal_entries = []
@@ -131,9 +115,8 @@ def add_entry(title: str, content: str) -> None:
         print("Please, insert a title and the content in your journal entry.")
     # Load the JSON content as a list of dictionaries
     journal_entries = load_entries()
-    # Append the entry object to the list, after converting
-    # it to a dictionary
-    journal_entries.append(journal_entry_to_JSON(new_journal_entry))
+    # Append the entry object to the list, after converting it to a dictionary
+    journal_entries.append(new_journal_entry)
     save_entries(journal_entries)
 
 
@@ -154,8 +137,8 @@ def list_entries() -> None:
     if not entries:
         print("No entries yet in Dev Journal.")
     for count, entry in enumerate(entries, start=1):
-        print(f"{count}. {entry.get("Title")}  ({entry.get("Date")})")
-        print(f"{entry.get("Content")}\n")
+        print(f"{count}. {entry.title}  ({entry.timestamp})")
+        print(f"{entry.content}\n")
 
 
 @app.command()
@@ -175,7 +158,7 @@ def edit_entry(title: str, new_content: str) -> None | str:
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the title passed by the user is found in an entry value.
-    if not any(title in entry.get("Title") for entry in journal_entries):
+    if not any(title in entry.title for entry in journal_entries):
         # If title is not part of an entry, print a message to the screen.
         print("No entry was found with this title")
     else:
@@ -183,8 +166,8 @@ def edit_entry(title: str, new_content: str) -> None | str:
         for entry in journal_entries:
             # If the title of the current entry is the same as the one
             # typed by the user, update the content of this entry.
-            if entry["Title"] == title:
-                entry["Content"] = new_content
+            if entry.title == title:
+                entry.content = new_content
         save_entries(journal_entries)
 
 
@@ -204,7 +187,7 @@ def delete_entry(title: str) -> None | str:
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the title passed by the user is found in an entry value.
-    if not any(title in entry.get("Title") for entry in journal_entries):
+    if not any(title in entry.title for entry in journal_entries):
         # If title is not part of an entry, print a message to the screen.
         print("No entry was found with this title")
     else:
@@ -212,7 +195,7 @@ def delete_entry(title: str) -> None | str:
         for entry in journal_entries:
             # If the title of the current entry is the same as the one
             # typed by the user, delete this entry from the list.
-            if entry["Title"] == title:
+            if entry.title == title:
                 journal_entries.remove(entry)
         save_entries(journal_entries)
 
