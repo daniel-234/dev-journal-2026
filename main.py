@@ -23,6 +23,10 @@ class ContentTooLongException(Exception):
     """Content longer than CONTENT_LENGTH characters"""
 
 
+class EntryAlreadyExists(Exception):
+    """An entry with this title already exists"""
+
+
 # 📝 Define a JournalEntry class with title, content, and date
 @dataclass
 class JournalEntry:
@@ -50,6 +54,13 @@ class JournalEntry:
             raise ContentTooLongException(
                 "Content must not exceed CONTENT_LENGTH characters."
             )
+
+    @classmethod
+    def create(cls, title: str, content: str):
+        existing_entries = load_entries()
+        if any(entry.title.lower() == title.lower() for entry in existing_entries):
+            raise EntryAlreadyExists
+        return cls(title=title, content=content)
 
 
 def save_entries(entries: list[JournalEntry]) -> None:
@@ -110,11 +121,14 @@ def add_entry(title: str, content: str) -> None:
     if not title or not content:
         raise ValueError("Please, intert a title and the content.")
     try:
-        new_journal_entry = JournalEntry(title, content)
+        new_journal_entry = JournalEntry.create(title, content)
     except TypeError:
         print("Please, insert a title and the content in your journal entry.")
     # Load the JSON content as a list of dictionaries
     journal_entries = load_entries()
+
+    # if any(entry.title.lower() == new_journal_entry.title.lower() for entry in journal_entries):
+    #        raise EntryAlreadyExists("An entry with this title already exists.")
     # Append the entry object to the list, after converting it to a dictionary
     journal_entries.append(new_journal_entry)
     save_entries(journal_entries)
