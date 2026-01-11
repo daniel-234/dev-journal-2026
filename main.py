@@ -105,7 +105,7 @@ def save_entries(entries: list[JournalEntry]) -> None:
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         # Convert each "entry" object to a dictionary to be serializable
         journal_entries = [asdict(entry) for entry in entries]
-        json.dump(journal_entries, write_file)
+        json.dump(journal_entries, write_file, indent=4)
 
 
 def load_entries() -> list[JournalEntry]:
@@ -133,7 +133,7 @@ def load_entries() -> list[JournalEntry]:
 
 
 @app.command()
-def add_entry(title: str, content: str) -> None:
+def add_entry() -> None:
     """
     Create a new journal entry and save it to the JSON file, at the beginning of the list.
 
@@ -147,10 +147,15 @@ def add_entry(title: str, content: str) -> None:
     Raises:
         TypeError: If at least one argument is missing.
     """
-    if not title or not content:
-        raise ValueError("Please, intert a title and the content.")
+    title = input("Title: ")
+    if not title:
+        raise ValueError("Please, insert a title for the entry.")
+    content = input("Content: ")
+    if not content:
+        raise ValueError("Please, intert some content for this entry.")
     try:
         new_journal_entry = JournalEntry.create(title, content)
+        print("\u2705 Entry saved.")
     except TypeError:
         print("Please, insert a title and the content in your journal entry.")
     # Load the JSON content as a list of dictionaries
@@ -177,7 +182,9 @@ def list_entries() -> None:
     if not entries:
         print("No entries yet in Dev Journal.")
     for count, entry in enumerate(entries, start=1):
-        print(f"{entry.id}. {entry.title}  ({entry.timestamp})")
+        print("-" * 70)
+        print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
+        print("-" * 70)
         print(f"{entry.content}\n")
 
 
