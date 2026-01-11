@@ -11,6 +11,7 @@ DB_FILE.touch(exist_ok=True)
 
 TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
+MAX_ID = 99999
 
 app = typer.Typer()
 
@@ -27,6 +28,10 @@ class EntryAlreadyExists(Exception):
     """An entry with this title already exists"""
 
 
+class MaximumNumberOfEntries(Exception):
+    """Maximum number of journal entries reached"""
+
+
 # 📝 Define a JournalEntry class with title, content, and date
 @dataclass
 class JournalEntry:
@@ -34,6 +39,7 @@ class JournalEntry:
     Represents an entry to the journal.
     """
 
+    id: str
     title: str
     content: str
     # The 'field' function allows more control over a field definition.
@@ -60,7 +66,30 @@ class JournalEntry:
         existing_entries = load_entries()
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
             raise EntryAlreadyExists
-        return cls(title=title, content=content)
+        entry_id = next_entry_id(existing_entries)
+        return cls(id=entry_id, title=title, content=content)
+
+
+def next_entry_id(existing_entries: list[JournalEntry]) -> str:
+    """ "
+    Add human-friendly, unique and ordered IDs to each entry with no more than 5 digits
+
+    Args:
+        existing_entries: list[JournalEntry]: a list of the existing entries.
+
+    Returns:
+        str: A unique ID with 5 digits, 0 padded and right aligned, increased
+             by 1 regarding to the maximum ID already created.
+    """
+    if not existing_entries:
+        return "00001"
+
+    max_id = max(int(entry.id) for entry in existing_entries)
+    if max_id >= MAX_ID:
+        raise MaximumNumberOfEntries(
+            "You have already reached the maximum number of entries. Please, delete one before adding this new entry."
+        )
+    return f"{max_id + 1:05d}"
 
 
 def save_entries(entries: list[JournalEntry]) -> None:
@@ -68,7 +97,7 @@ def save_entries(entries: list[JournalEntry]) -> None:
     Save entries to the JSON file.
 
     Args:
-        entries (JournalEntries): A list of entries
+        entries (list[JournalEntry]): A list of entries.
 
     Returns:
         None
@@ -151,7 +180,7 @@ def list_entries() -> None:
     if not entries:
         print("No entries yet in Dev Journal.")
     for count, entry in enumerate(entries, start=1):
-        print(f"{count}. {entry.title}  ({entry.timestamp})")
+        print(f"{entry.id}. {entry.title}  ({entry.timestamp})")
         print(f"{entry.content}\n")
 
 
