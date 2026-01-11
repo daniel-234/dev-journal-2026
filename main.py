@@ -189,32 +189,39 @@ def list_entries() -> None:
 
 
 @app.command()
-def edit_entry(title: str, new_content: str) -> None | str:
+def edit_entry() -> None | str:
     """
-    Edit an entry content given its title.
+    Edit an entry content given its ID.
 
     Args:
-        title (str): The title of the entry the user wants to edit.
-        new_content (str): The content to edit.
+        None
 
     Returns:
-        None | str: If title is not found in the journal, print a message
+        None | str: If the ID is not found in the journal, print a message
                     to the user; otherwise don't return anything.
     """
+    entry_id = input("Type the ID of the entry you want to edit:")
+    if not entry_id:
+        raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
-    # Check if the title passed by the user is found in an entry value.
-    if not any(title in entry.title for entry in journal_entries):
-        # If title is not part of an entry, print a message to the screen.
-        print("No entry was found with this title")
+    # Check if the ID passed by the user is found in an entry value.
+    if not any(entry_id in entry.id for entry in journal_entries):
+        # If there is no entry with this ID, print a message to the screen.
+        print("No entry was found with this ID")
     else:
         # Check each entry dictionary in the list.
         for entry in journal_entries:
-            # If the title of the current entry is the same as the one
-            # typed by the user, update the content of this entry.
-            if entry.title == title:
+            # If the ID of the current entry is the same as the one
+            # typed by the user, ask the user for the content to update this entry.
+            if entry.id == entry_id:
+                new_content = input(
+                    f"Insert the new content for the entry {entry.title}:  "
+                )
                 entry.content = new_content
+                print("\u2705 New content saved:  ")
+                print(f"{new_content}")
         save_entries(journal_entries)
 
 
