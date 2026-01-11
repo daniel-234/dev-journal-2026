@@ -135,7 +135,7 @@ def load_entries() -> list[JournalEntry]:
 @app.command()
 def add_entry(title: str, content: str) -> None:
     """
-    Create a new journal entry and save it to the JSON file.
+    Create a new journal entry and save it to the JSON file, at the beginning of the list.
 
     Args:
         title (str): The title of the entry to add.
@@ -155,11 +155,8 @@ def add_entry(title: str, content: str) -> None:
         print("Please, insert a title and the content in your journal entry.")
     # Load the JSON content as a list of dictionaries
     journal_entries = load_entries()
-
-    # if any(entry.title.lower() == new_journal_entry.title.lower() for entry in journal_entries):
-    #        raise EntryAlreadyExists("An entry with this title already exists.")
-    # Append the entry object to the list, after converting it to a dictionary
-    journal_entries.append(new_journal_entry)
+    # Add the new entry to the beginning of the list, to preserve its cronological order
+    journal_entries = [new_journal_entry] + journal_entries
     save_entries(journal_entries)
 
 
