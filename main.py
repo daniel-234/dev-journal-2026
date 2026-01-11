@@ -200,7 +200,7 @@ def edit_entry() -> None | str:
         None | str: If the ID is not found in the journal, print a message
                     to the user; otherwise don't return anything.
     """
-    entry_id = input("Type the ID of the entry you want to edit:")
+    entry_id = input("Type the ID of the entry you want to edit: ")
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
@@ -226,31 +226,35 @@ def edit_entry() -> None | str:
 
 
 @app.command()
-def delete_entry(title: str) -> None | str:
+def delete_entry() -> None | str:
     """
-    Delete an entry given its title.
+    Delete an entry given its ID.
 
     Args:
-        title (str): The title of the entry to delete.
+        None
 
     Returns:
-        None | str: If title is not in the journal, print a message
+        None | str: If the ID is not in the journal, print a message
                     to inform the user; don't return anything otherwise.
     """
+    entry_id = input("Type the ID of the entry you want to delete: ")
+    if not entry_id:
+        raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
-    # Check if the title passed by the user is found in an entry value.
-    if not any(title in entry.title for entry in journal_entries):
-        # If title is not part of an entry, print a message to the screen.
-        print("No entry was found with this title")
+    # Check if the ID passed by the user is found in an entry value.
+    if not any(entry_id in entry.id for entry in journal_entries):
+        # If there is no entry with this ID, print a message to the screen.
+        print("No entry was found with this ID.")
     else:
         # Check each entry dictionary in the list.
         for entry in journal_entries:
-            # If the title of the current entry is the same as the one
+            # If the ID of the current entry is the same as the one
             # typed by the user, delete this entry from the list.
-            if entry.title == title:
+            if entry.id == entry_id:
                 journal_entries.remove(entry)
+                print("\u2702 Entry removed.")
         save_entries(journal_entries)
 
 
