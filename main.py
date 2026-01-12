@@ -1,4 +1,5 @@
 import json
+import random
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -254,7 +255,7 @@ def delete_entry() -> None | str:
             # typed by the user, delete this entry from the list.
             if entry.id == entry_id:
                 journal_entries.remove(entry)
-                print("\u2702 Entry removed.")
+                print("\u2702 \u27a1 \u274e  Entry removed.")
         save_entries(journal_entries)
 
 
@@ -269,10 +270,17 @@ def populate_journal() -> None:
     Returns:
         None
     """
+    random_num = random.randint(0, 20)
     fake = Faker()
-    Faker.seed(0)
-    for _ in range(5):
-        add_entry(fake.company(), fake.catch_phrase())
+    Faker.seed()
+    journal_entries = load_entries()
+    # Get 5 new entries, randomly, from Faker
+    for _ in range(random_num, random_num + 5):
+        new_title = fake.company()
+        if not any(new_title in entry.title for entry in journal_entries):
+            new_journal_entry = JournalEntry.create(fake.company(), fake.catch_phrase())
+            journal_entries = [new_journal_entry] + journal_entries
+        save_entries(journal_entries)
 
 
 if __name__ == "__main__":
