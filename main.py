@@ -48,6 +48,8 @@ class JournalEntry:
     # that needs to be computed dynamically, such as a timestamp.
     # Use an anonymous inline lambda function to compute the timestamp.
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Add support for tags in entries
+    tags: list[str] = field(default_factory=list)
 
     # Check if title or content length are too long at construction
     def __post_init__(self):
@@ -152,14 +154,18 @@ def add_entry() -> None:
     content = input("Content: ")
     if not content:
         raise ValueError("Please, intert some content for this entry.")
+    tags = input("Tags (comma separated):  ")
+    tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
     try:
         new_journal_entry = JournalEntry.create(title, content)
         new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
             timespec="seconds"
         )
+        new_journal_entry.tags = tags
         print("\u2705 Entry saved.")
     except TypeError:
         print("Please, insert a title and the content in your journal entry.")
+
     # Load the JSON content as a list of dictionaries
     journal_entries = load_entries()
     # Add the new entry to the beginning of the list, to preserve its cronological order
@@ -187,7 +193,9 @@ def list_entries() -> None:
         print("-" * 70)
         print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
         print("-" * 70)
-        print(f"{entry.content}\n")
+        print(f"{entry.content}")
+        print("-" * 70)
+        print(f"tags: {entry.tags}\n")
 
 
 @app.command()
@@ -278,13 +286,17 @@ def populate_journal() -> None:
     # Get 5 new entries, randomly, from Faker
     for _ in range(random_num, random_num + 5):
         new_title = fake.company()
+        tags = fake.bs()
         if not any(new_title in entry.title for entry in journal_entries):
             new_journal_entry = JournalEntry.create(fake.company(), fake.catch_phrase())
             new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
                 timespec="seconds"
             )
+            tags = [tag.strip() for tag in tags.split(" ") if tag.strip()]
+            new_journal_entry.tags = tags
             journal_entries = [new_journal_entry] + journal_entries
         save_entries(journal_entries)
+    print("\u2705 Journal populated.")
 
 
 if __name__ == "__main__":
