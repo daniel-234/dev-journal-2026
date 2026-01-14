@@ -270,7 +270,9 @@ def delete_entry() -> None | str:
 
 
 @app.command()
-def search(query: str) -> list[JournalEntry]:
+def search(
+    query: str, titles_only: bool = typer.Option(default=False)
+) -> list[JournalEntry]:
     """
     Search for string matching in entry titles, content and tags
 
@@ -281,21 +283,29 @@ def search(query: str) -> list[JournalEntry]:
         list[JournalEntry]: The list of matching entries
     """
     journal_entries = load_entries()
-    title_results = [
-        entry for entry in journal_entries if query.lower() in entry.title.lower()
-    ]
-    content_results = [
-        entry
-        for entry in journal_entries
-        if query.lower() in entry.content.lower() and entry not in title_results
-    ]
-    tags_results = [
-        entry
-        for entry in journal_entries
-        if any(query.lower() in tag.lower() for tag in entry.tags)
-        and entry not in content_results
-    ]
-    search_results = title_results + content_results + tags_results
+    # If the option "titles_ony" is True, limit the search results to titles
+    if titles_only:
+        search_results = [
+            entry for entry in journal_entries if query.lower() in entry.title.lower()
+        ]
+    # If the option "titles_only" is False, show results from content and tags, as well
+    else:
+        title_results = [
+            entry for entry in journal_entries if query.lower() in entry.title.lower()
+        ]
+        content_results = [
+            entry
+            for entry in journal_entries
+            if query.lower() in entry.content.lower() and entry not in title_results
+        ]
+        tags_results = [
+            entry
+            for entry in journal_entries
+            if any(query.lower() in tag.lower() for tag in entry.tags)
+            and entry not in content_results
+        ]
+        search_results = title_results + content_results + tags_results
+
     for entry in search_results:
         print("\n")
         print("-" * 70)
