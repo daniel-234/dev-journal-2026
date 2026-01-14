@@ -47,9 +47,7 @@ class JournalEntry:
     # The 'default_factory' parameter accepts a function that returns an initial value
     # that needs to be computed dynamically, such as a timestamp.
     # Use an anonymous inline lambda function to compute the timestamp.
-    timestamp: datetime = field(
-        default_factory=lambda: f"{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")}"
-    )
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Check if title or content length are too long at construction
     def __post_init__(self):
@@ -156,6 +154,9 @@ def add_entry() -> None:
         raise ValueError("Please, intert some content for this entry.")
     try:
         new_journal_entry = JournalEntry.create(title, content)
+        new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+            timespec="seconds"
+        )
         print("\u2705 Entry saved.")
     except TypeError:
         print("Please, insert a title and the content in your journal entry.")
@@ -279,6 +280,9 @@ def populate_journal() -> None:
         new_title = fake.company()
         if not any(new_title in entry.title for entry in journal_entries):
             new_journal_entry = JournalEntry.create(fake.company(), fake.catch_phrase())
+            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                timespec="seconds"
+            )
             journal_entries = [new_journal_entry] + journal_entries
         save_entries(journal_entries)
 
