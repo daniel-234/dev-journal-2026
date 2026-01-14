@@ -174,7 +174,11 @@ def add_entry() -> None:
 
 
 @app.command()
-def list_entries() -> None:
+def list_entries(
+    tag: list[str] = typer.Option(
+        default=[], help="Match only entries with any of the given tags"
+    ),
+) -> None:
     """
     Print all journal entries to the console.
 
@@ -189,6 +193,13 @@ def list_entries() -> None:
     # Print a message to the user to let know there's no entry yet
     if not entries:
         print("No entries yet in Dev Journal.")
+    if tag:
+        # Match an entry from entries if any given 'query_tag' in the given tag list is a tag to that entry
+        entries = [
+            entry
+            for entry in entries
+            if any(query_tag.lower() in map(str.lower, entry.tags) for query_tag in tag)
+        ]
     for entry in entries:
         print("\n")
         print("-" * 70)
@@ -271,16 +282,20 @@ def delete_entry() -> None | str:
 
 @app.command()
 def search(
-    query: str, titles_only: bool = typer.Option(default=False)
+    query: str,
+    titles_only: bool = typer.Option(
+        default=False, help="Limit your search results to tile only"
+    ),
 ) -> list[JournalEntry]:
     """
-    Search for string matching in entry titles, content and tags
+    Search for string matching in entry titles, content and tags.
 
     Args:
-        query (str): The string you have to search
+        query (str): The string you have to search.
+        titles_only (bool): Limit your search results to titles only (OPTIONAL).
 
     Returns:
-        list[JournalEntry]: The list of matching entries
+        list[JournalEntry]: The list of matching entries.
     """
     journal_entries = load_entries()
     # If the option "titles_ony" is True, limit the search results to titles
