@@ -189,7 +189,8 @@ def list_entries() -> None:
     # Print a message to the user to let know there's no entry yet
     if not entries:
         print("No entries yet in Dev Journal.")
-    for count, entry in enumerate(entries, start=1):
+    for entry in entries:
+        print("\n")
         print("-" * 70)
         print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
         print("-" * 70)
@@ -266,6 +267,43 @@ def delete_entry() -> None | str:
                 journal_entries.remove(entry)
                 print("\u2702 \u27a1 \u274e  Entry removed.")
         save_entries(journal_entries)
+
+
+@app.command()
+def search(query: str) -> list[JournalEntry]:
+    """
+    Search for string matching in entry titles, content and tags
+
+    Args:
+        query (str): The string you have to search
+
+    Returns:
+        list[JournalEntry]: The list of matching entries
+    """
+    journal_entries = load_entries()
+    title_results = [
+        entry for entry in journal_entries if query.lower() in entry.title.lower()
+    ]
+    content_results = [
+        entry
+        for entry in journal_entries
+        if query.lower() in entry.content.lower() and entry not in title_results
+    ]
+    tags_results = [
+        entry
+        for entry in journal_entries
+        if any(query.lower() in tag.lower() for tag in entry.tags)
+        and entry not in content_results
+    ]
+    search_results = title_results + content_results + tags_results
+    for entry in search_results:
+        print("\n")
+        print("-" * 70)
+        print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
+        print("-" * 70)
+        print(f"{entry.content}")
+        print("-" * 70)
+        print(f"tags: {entry.tags}\n")
 
 
 @app.command()
