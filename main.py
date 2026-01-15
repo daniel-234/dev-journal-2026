@@ -14,6 +14,7 @@ DB_FILE.touch(exist_ok=True)
 TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
 MAX_ID = 99999
+FIRST_ID = "00001"
 
 app = typer.Typer()
 
@@ -67,7 +68,7 @@ class JournalEntry:
     def create(cls, title: str, content: str):
         existing_entries = load()
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
-            raise EntryAlreadyExists
+            raise EntryAlreadyExists("An entry with this title already exists.")
         entry_id = next_entry_id(existing_entries)
         return cls(id=entry_id, title=title, content=content)
 
@@ -84,7 +85,7 @@ def next_entry_id(existing_entries: list[JournalEntry]) -> str:
              by 1 regarding to the maximum ID already created.
     """
     if not existing_entries:
-        return "00001"
+        return FIRST_ID
 
     max_id = max(int(entry.id) for entry in existing_entries)
     if max_id >= MAX_ID:
@@ -365,34 +366,39 @@ def stats() -> None:
 
 
 @app.command()
-def populate() -> None:
+def populate(num_items: int) -> None:
     """
     Populate the journal with fake content.
 
     Args:
-        None
+        num_items (int): The number of items to generate to populate the journal.
 
     Returns:
         None
     """
-    random_num = random.randint(0, 20)
-    fake = Faker()
-    Faker.seed()
-    journal_entries = load()
-    # Get 5 new entries, randomly, from Faker
-    for _ in range(random_num, random_num + 5):
-        new_title = fake.company()
-        tags = fake.bs()
-        if not any(new_title in entry.title for entry in journal_entries):
-            new_journal_entry = JournalEntry.create(fake.company(), fake.catch_phrase())
-            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
-                timespec="seconds"
-            )
-            tags = [tag.strip() for tag in tags.split(" ") if tag.strip()]
-            new_journal_entry.tags = tags
-            journal_entries = [new_journal_entry] + journal_entries
-        save(journal_entries)
-    print("\u2705 Journal populated.")
+    if num_items > 50:
+        print("Please, choose a number of items not greater than 50.")
+    else:
+        random_num = random.randint(0, 20)
+        fake = Faker()
+        Faker.seed()
+        journal_entries = load()
+        # Get num_items new entries, randomly, from Faker
+        for _ in range(random_num, random_num + num_items):
+            new_title = fake.company()
+            tags = fake.bs()
+            if not any(new_title in entry.title for entry in journal_entries):
+                new_journal_entry = JournalEntry.create(
+                    fake.company(), fake.catch_phrase()
+                )
+                new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                    timespec="seconds"
+                )
+                tags = [tag.strip() for tag in tags.split(" ") if tag.strip()]
+                new_journal_entry.tags = tags
+                journal_entries = [new_journal_entry] + journal_entries
+            save(journal_entries)
+        print("\u2705 Journal populated.")
 
 
 if __name__ == "__main__":
