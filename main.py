@@ -4,6 +4,7 @@ from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from faker import Faker
@@ -136,13 +137,18 @@ def load() -> list[JournalEntry]:
 
 
 @app.command()
-def add() -> None:
+def add(
+    title: Annotated[str, typer.Argument(help="Insert a title for this entry.")],
+    content: Annotated[str, typer.Argument(help="Insert a content for this entry.")],
+    tags: Annotated[str, typer.Argument(help="Insert tags (comma separated).")],
+) -> None:
     """
     Create a new journal entry and save it to the JSON file, at the beginning of the list.
 
     Args:
         title (str): The title of the entry to add.
         content (str): The content of the entry to add.
+        tags (str): Tags, comma separated, for the entry.
 
     Returns:
         None
@@ -150,13 +156,10 @@ def add() -> None:
     Raises:
         TypeError: If at least one argument is missing.
     """
-    title = input("Title: ")
     if not title:
         raise ValueError("Please, insert a title for the entry.")
-    content = input("Content: ")
     if not content:
         raise ValueError("Please, intert some content for this entry.")
-    tags = input("Tags (comma separated):  ")
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
     try:
         new_journal_entry = JournalEntry.create(title, content)
@@ -213,18 +216,19 @@ def display(
 
 
 @app.command()
-def edit() -> None | str:
+def edit(
+    entry_id: Annotated[str, typer.Argument(help="Entry ID to edit")],
+) -> None | str:
     """
     Edit an entry content given its ID.
 
     Args:
-        None
+        entry_id (str): The ID of the entry to edit.
 
     Returns:
         None | str: If the ID is not found in the journal, print a message
                     to the user; otherwise don't return anything.
     """
-    entry_id = input("Type the ID of the entry you want to edit: ")
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
@@ -250,18 +254,19 @@ def edit() -> None | str:
 
 
 @app.command()
-def delete() -> None | str:
+def delete(
+    entry_id: Annotated[str, typer.Argument(help="Entry ID to delete")],
+) -> None | str:
     """
     Delete an entry given its ID.
 
     Args:
-        None
+        entry_id (str): The ID of the entry to delete.
 
     Returns:
         None | str: If the ID is not in the journal, print a message
                     to inform the user; don't return anything otherwise.
     """
-    entry_id = input("Type the ID of the entry you want to delete: ")
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
