@@ -1,5 +1,6 @@
 import json
 import random
+from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -329,6 +330,38 @@ def search(
         print(f"{entry.content}")
         print("-" * 70)
         print(f"tags: {entry.tags}\n")
+
+
+@app.command()
+def stats() -> None:
+    """
+    Show some overall stats: total entries, counts by tag, average content length, most common tag
+
+    Args:
+        None
+
+    returns:
+        None
+    """
+    entries = load()
+    total = len(entries)
+    print(f"\nNumber of entries: {total}")
+    print("-" * 50)
+    tags = []
+    for entry in entries:
+        tags = tags + [tag for tag in entry.tags]
+    by_tag = Counter(tags).most_common()
+    if len(by_tag) > 0:
+        print("\nCounts by tag: \n")
+    for value, count in by_tag:
+        print(value, count)
+    if by_tag:
+        higher_freq = [value for value, count in by_tag if count == by_tag[0][1]]
+        contents = [len(value) for value, count in by_tag]
+        average_content_length = sum(contents) / len(contents)
+        print("*" * 50)
+        print(f"\nAverage content length: {round(average_content_length)}")
+        print(f"\nMost common tag(s): {higher_freq}")
 
 
 @app.command()
