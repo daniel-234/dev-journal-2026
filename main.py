@@ -64,7 +64,7 @@ class JournalEntry:
 
     @classmethod
     def create(cls, title: str, content: str):
-        existing_entries = load_entries()
+        existing_entries = load()
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
             raise EntryAlreadyExists
         entry_id = next_entry_id(existing_entries)
@@ -93,7 +93,7 @@ def next_entry_id(existing_entries: list[JournalEntry]) -> str:
     return f"{max_id + 1:05d}"
 
 
-def save_entries(entries: list[JournalEntry]) -> None:
+def save(entries: list[JournalEntry]) -> None:
     """
     Save entries to the JSON file.
 
@@ -109,7 +109,7 @@ def save_entries(entries: list[JournalEntry]) -> None:
         json.dump(journal_entries, write_file, indent=4)
 
 
-def load_entries() -> list[JournalEntry]:
+def load() -> list[JournalEntry]:
     """
     Load journal entries from the JSON file.
 
@@ -134,7 +134,7 @@ def load_entries() -> list[JournalEntry]:
 
 
 @app.command()
-def add_entry() -> None:
+def add() -> None:
     """
     Create a new journal entry and save it to the JSON file, at the beginning of the list.
 
@@ -167,14 +167,14 @@ def add_entry() -> None:
         print("Please, insert a title and the content in your journal entry.")
 
     # Load the JSON content as a list of dictionaries
-    journal_entries = load_entries()
+    journal_entries = load()
     # Add the new entry to the beginning of the list, to preserve its cronological order
     journal_entries = [new_journal_entry] + journal_entries
-    save_entries(journal_entries)
+    save(journal_entries)
 
 
 @app.command()
-def list_entries(
+def display(
     tag: list[str] = typer.Option(
         default=[], help="Match only entries with any of the given tags"
     ),
@@ -183,13 +183,13 @@ def list_entries(
     Print all journal entries to the console.
 
     Args:
-        None
+        tag list[str]: A list of tags to filter the list of entries (Optional).
 
     Returns:
         None
     """
     # Load entries
-    entries = load_entries()
+    entries = load()
     # Print a message to the user to let know there's no entry yet
     if not entries:
         print("No entries yet in Dev Journal.")
@@ -211,7 +211,7 @@ def list_entries(
 
 
 @app.command()
-def edit_entry() -> None | str:
+def edit() -> None | str:
     """
     Edit an entry content given its ID.
 
@@ -226,7 +226,7 @@ def edit_entry() -> None | str:
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entries()
+    journal_entries = load()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the ID passed by the user is found in an entry value.
     if not any(entry_id in entry.id for entry in journal_entries):
@@ -244,11 +244,11 @@ def edit_entry() -> None | str:
                 entry.content = new_content
                 print("\u2705 New content saved:  ")
                 print(f"{new_content}")
-        save_entries(journal_entries)
+        save(journal_entries)
 
 
 @app.command()
-def delete_entry() -> None | str:
+def delete() -> None | str:
     """
     Delete an entry given its ID.
 
@@ -263,7 +263,7 @@ def delete_entry() -> None | str:
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entries()
+    journal_entries = load()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the ID passed by the user is found in an entry value.
     if not any(entry_id in entry.id for entry in journal_entries):
@@ -277,7 +277,7 @@ def delete_entry() -> None | str:
             if entry.id == entry_id:
                 journal_entries.remove(entry)
                 print("\u2702 \u27a1 \u274e  Entry removed.")
-        save_entries(journal_entries)
+        save(journal_entries)
 
 
 @app.command()
@@ -297,7 +297,7 @@ def search(
     Returns:
         list[JournalEntry]: The list of matching entries.
     """
-    journal_entries = load_entries()
+    journal_entries = load()
     # If the option "titles_ony" is True, limit the search results to titles
     if titles_only:
         search_results = [
@@ -332,7 +332,7 @@ def search(
 
 
 @app.command()
-def populate_journal() -> None:
+def populate() -> None:
     """
     Populate the journal with fake content.
 
@@ -345,7 +345,7 @@ def populate_journal() -> None:
     random_num = random.randint(0, 20)
     fake = Faker()
     Faker.seed()
-    journal_entries = load_entries()
+    journal_entries = load()
     # Get 5 new entries, randomly, from Faker
     for _ in range(random_num, random_num + 5):
         new_title = fake.company()
@@ -358,7 +358,7 @@ def populate_journal() -> None:
             tags = [tag.strip() for tag in tags.split(" ") if tag.strip()]
             new_journal_entry.tags = tags
             journal_entries = [new_journal_entry] + journal_entries
-        save_entries(journal_entries)
+        save(journal_entries)
     print("\u2705 Journal populated.")
 
 
