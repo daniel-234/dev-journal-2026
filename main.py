@@ -1,5 +1,4 @@
 import json
-import random
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -67,6 +66,9 @@ class JournalEntry:
 
     @classmethod
     def create(cls, title: str, content: str):
+        # TODO: see if we break out the next entry id logic, because populate
+        # below does the saving outside of the loop so then this counter increment
+        # would be off
         existing_entries = load()
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
             raise EntryAlreadyExists("An entry with this title already exists.")
@@ -273,18 +275,19 @@ def delete(
     journal_entries = load()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the ID passed by the user is found in an entry value.
-    if not any(entry_id in entry.id for entry in journal_entries):
+    if not any(entry_id == entry.id for entry in journal_entries):
         # If there is no entry with this ID, print a message to the screen.
         print("No entry was found with this ID.")
-    else:
-        # Check each entry dictionary in the list.
-        for entry in journal_entries:
-            # If the ID of the current entry is the same as the one
-            # typed by the user, delete this entry from the list.
-            if entry.id == entry_id:
-                journal_entries.remove(entry)
-                print("\u2702 \u27a1 \u274e  Entry removed.")
-        save(journal_entries)
+        raise typer.Exit()
+
+    # Check each entry dictionary in the list.
+    for entry in journal_entries:
+        # If the ID of the current entry is the same as the one
+        # typed by the user, delete this entry from the list.
+        if entry.id == entry_id:
+            journal_entries.remove(entry)
+            print("\u2702 \u27a1 \u274e  Entry removed.")
+            save(journal_entries)
 
 
 @app.command()
@@ -381,29 +384,46 @@ def populate(num_items: int) -> None:
     Returns:
         None
     """
-    if num_items > 50:
+    if num_items > 1000:
         print("Please, choose a number of items not greater than 50.")
     else:
-        random_num = random.randint(0, 20)
         fake = Faker()
         Faker.seed()
         journal_entries = load()
         # Get num_items new entries, randomly, from Faker
-        for _ in range(random_num, random_num + num_items):
+        counter = 0
+        new_journal_entries = []
+        while counter < num_items:
             new_title = fake.company()
-            tags = fake.bs()
-            if not any(new_title in entry.title for entry in journal_entries):
+            new_content = fake.catch_phrase()
+            new_tags = fake.bs()
+
+            try:
+                # this calculates next id based on data on disk
                 new_journal_entry = JournalEntry.create(
-                    fake.company(), fake.catch_phrase()
+                    new_title[:TITLE_LENGTH],
+                    new_content[:CONTENT_LENGTH],
                 )
-                new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
-                    timespec="seconds"
-                )
-                tags = [tag.strip() for tag in tags.split(" ") if tag.strip()]
-                new_journal_entry.tags = tags
-                journal_entries = [new_journal_entry] + journal_entries
-            save(journal_entries)
-        print("\u2705 Journal populated.")
+            except EntryAlreadyExists:
+                print("Entry already exists. Skipping...")
+                continue
+
+            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                timespec="seconds"
+            )
+            tags = [tag.strip() for tag in new_tags.split(" ") if tag.strip()]
+            new_journal_entry.tags = tags
+
+            new_journal_entries.append(new_journal_entry)
+
+            # need to call save in the loop because `create` needs data on disk
+            # to calculate the next id
+            counter += 1
+
+        save(journal_entries + new_journal_entries)
+
+        assert num_items == counter
+        print(f"\u2705 Journal populated with {counter} new entries.")
 
 
 if __name__ == "__main__":
