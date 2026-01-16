@@ -16,6 +16,7 @@ TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
 MAX_ID = 99999
 FIRST_ID = "00001"
+MAX_ITEMS = 50
 
 app = typer.Typer()
 
@@ -77,14 +78,8 @@ class JournalEntry:
 def next_entry_id(existing_entries: list[JournalEntry]) -> str:
     """ "
     Add human-friendly, unique and ordered IDs to each entry with no more than 5 digits
-
-    Args:
-        existing_entries: list[JournalEntry]: a list of the existing entries.
-
-    Returns:
-        str: A unique ID with 5 digits, 0 padded and right aligned, increased
-             by 1 regarding to the maximum ID already created.
     """
+
     if not existing_entries:
         return FIRST_ID
 
@@ -99,13 +94,8 @@ def next_entry_id(existing_entries: list[JournalEntry]) -> str:
 def save(entries: list[JournalEntry]) -> None:
     """
     Save entries to the JSON file.
-
-    Args:
-        entries (list[JournalEntry]): A list of entries.
-
-    Returns:
-        None
     """
+
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         # Convert each "entry" object to a dictionary to be serializable
         journal_entries = [asdict(entry) for entry in entries]
@@ -115,17 +105,8 @@ def save(entries: list[JournalEntry]) -> None:
 def load_entry() -> list[JournalEntry]:
     """
     Load journal entries from the JSON file.
-
-    Args:
-        None
-
-    Returns:
-        list[JournalEntry]: a list of JournalEntry objects.
-
-    Raises:
-        JSONDecodeError: If the data being deserialized is not valid JSON.
-        FileNotFoundError: If a JSON file has not yet been created.
     """
+
     with open(DB_FILE, mode="r") as read_file:
         try:
             # Load the entries from the Dev Journal as a list of JournalEntry objects
@@ -144,18 +125,8 @@ def add(
 ) -> None:
     """
     Create a new journal entry and save it to the JSON file, at the beginning of the list.
-
-    Args:
-        title (str): The title of the entry to add.
-        content (str): The content of the entry to add.
-        tags (str): Tags, comma separated, for the entry.
-
-    Returns:
-        None
-
-    Raises:
-        TypeError: If at least one argument is missing.
     """
+
     if not title:
         raise ValueError("Please, insert a title for the entry.")
     if not content:
@@ -180,30 +151,27 @@ def add(
 
 @app.command()
 def display(
-    tag: list[str] = typer.Option(
+    tags: list[str] = typer.Option(
         default=[], help="Match only entries with any of the given tags"
     ),
 ) -> None:
     """
     Print all journal entries to the console.
-
-    Args:
-        tag list[str]: A list of tags to filter the list of entries (Optional).
-
-    Returns:
-        None
     """
+
     # Load entries
     entries = load_entry()
     # Print a message to the user to let know there's no entry yet
     if not entries:
         print("No entries yet in Dev Journal.")
-    if tag:
-        # Match an entry from entries if any given 'query_tag' in the given tag list is a tag to that entry
+    if tags:
+        # Match an entry from entries if any given 'query_tag' in the given tags list is a tag to that entry
         entries = [
             entry
             for entry in entries
-            if any(query_tag.lower() in map(str.lower, entry.tags) for query_tag in tag)
+            if any(
+                query_tag.lower() in map(str.lower, entry.tags) for query_tag in tags
+            )
         ]
     for entry in entries:
         print("\n")
@@ -221,14 +189,8 @@ def edit(
 ) -> None | str:
     """
     Edit an entry content given its ID.
-
-    Args:
-        entry_id (str): The ID of the entry to edit.
-
-    Returns:
-        None | str: If the ID is not found in the journal, print a message
-                    to the user; otherwise don't return anything.
     """
+
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
@@ -259,14 +221,8 @@ def delete(
 ) -> None | str:
     """
     Delete an entry given its ID.
-
-    Args:
-        entry_id (str): The ID of the entry to delete.
-
-    Returns:
-        None | str: If the ID is not in the journal, print a message
-                    to inform the user; don't return anything otherwise.
     """
+
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
@@ -296,14 +252,8 @@ def search(
 ) -> list[JournalEntry]:
     """
     Search for string matching in entry titles, content and tags.
-
-    Args:
-        query (str): The string you have to search.
-        titles_only (bool): Limit your search results to titles only (OPTIONAL).
-
-    Returns:
-        list[JournalEntry]: The list of matching entries.
     """
+
     journal_entries = load_entry()
     # If the option "titles_ony" is True, limit the search results to titles
     if titles_only:
@@ -341,14 +291,9 @@ def search(
 @app.command()
 def stats() -> None:
     """
-    Show some overall stats: total entries, counts by tag, average content length, most common tag
-
-    Args:
-        None
-
-    returns:
-        None
+    Show some overall stats: total entries, counts by tag, average content length, most common tag.
     """
+
     entries = load_entry()
     total = len(entries)
     print(f"\nNumber of entries: {total}")
@@ -362,27 +307,25 @@ def stats() -> None:
     for value, count in by_tag:
         print(value, count)
     if by_tag:
-        higher_freq = [value for value, count in by_tag if count == by_tag[0][1]]
+        most_common = [value for value, count in by_tag if count == by_tag[0][1]]
+        # As by_tag is not empty, we can get the count of occurrences of the most common item
+        # by retrieving the second element of the first item.
+        higher_freq = by_tag[0][1]
         contents = [len(value) for value, count in by_tag]
         average_content_length = sum(contents) / len(contents)
         print("*" * 50)
         print(f"\nAverage content length: {round(average_content_length)}")
-        print(f"\nMost common tag(s): {higher_freq}")
+        print(f"\nMost common tag(s): {most_common} that appears {higher_freq} times.")
 
 
 @app.command()
 def populate(num_items: int) -> None:
     """
     Populate the journal with fake content.
-
-    Args:
-        num_items (int): The number of items to generate to populate the journal.
-
-    Returns:
-        None
     """
-    if num_items > 50:
-        print("Please, choose a number of items not greater than 50.")
+
+    if num_items > MAX_ITEMS:
+        print(f"Please, choose a number of items not greater than {MAX_ITEMS}.")
     else:
         random_num = random.randint(0, 20)
         fake = Faker()
