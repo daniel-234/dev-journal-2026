@@ -68,6 +68,8 @@ class JournalEntry:
 
     @classmethod
     def create(cls, title: str, content: str):
+        # TODO: see if the entry id logic breaks out, as populate does now the
+        # saving outside of the loop
         existing_entries = load_entries()
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
             raise EntryAlreadyExists("An entry with this title already exists.")
@@ -232,15 +234,17 @@ def delete(
     if not any(entry_id == entry.id for entry in journal_entries):
         # If there is no entry with this ID, print a message to the screen.
         print("No entry was found with this ID.")
-    else:
-        # Check each entry dictionary in the list.
-        for entry in journal_entries:
-            # If the ID of the current entry is the same as the one
-            # typed by the user, delete this entry from the list.
-            if entry.id == entry_id:
-                journal_entries.remove(entry)
-                print("\u2702 \u27a1 \u274e  Entry removed.")
-        save(journal_entries)
+        raise typer.Exit()
+    # Check each entry dictionary in the list.
+    for entry in journal_entries:
+        # If the ID of the current entry is the same as the one
+        # typed by the user, delete this entry from the list.
+        if entry.id == entry_id:
+            journal_entries.remove(entry)
+            print("\u2702 \u27a1 \u274e  Entry removed.")
+            # TODO See if using a context manager for loading and saving can simplify this.
+            save(journal_entries)
+            break
 
 
 @app.command()
