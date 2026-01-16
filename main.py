@@ -229,7 +229,7 @@ def delete(
     journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the ID passed by the user is found in an entry value.
-    if not any(entry_id in entry.id for entry in journal_entries):
+    if not any(entry_id == entry.id for entry in journal_entries):
         # If there is no entry with this ID, print a message to the screen.
         print("No entry was found with this ID.")
     else:
