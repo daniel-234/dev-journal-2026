@@ -1,5 +1,4 @@
 import json
-import random
 from collections import Counter
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -67,10 +66,9 @@ class JournalEntry:
             )
 
     @classmethod
-    def create(cls, title: str, content: str):
-        # TODO: see if the entry id logic breaks out, as populate does now the
-        # saving outside of the loop
-        existing_entries = load_entries()
+    def create(
+        cls, title: str, content: str, existing_entries: list["JournalEntry"]
+    ) -> "JournalEntry":
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
             raise EntryAlreadyExists("An entry with this title already exists.")
         entry_id = next_entry_id(existing_entries)
@@ -78,7 +76,7 @@ class JournalEntry:
 
 
 def next_entry_id(existing_entries: list[JournalEntry]) -> str:
-    """ "
+    """
     Add human-friendly, unique and ordered IDs to each entry with no more than 5 digits
     """
 
@@ -134,8 +132,9 @@ def add(
     if not content:
         raise ValueError("Please, intert some content for this entry.")
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    journal_entries = load_entries()
     try:
-        new_journal_entry = JournalEntry.create(title, content)
+        new_journal_entry = JournalEntry.create(title, content, journal_entries)
         new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
             timespec="seconds"
         )
@@ -143,9 +142,6 @@ def add(
         print("\u2705 Entry saved.")
     except TypeError:
         print("Please, insert a title and the content in your journal entry.")
-
-    # Load the JSON content as a list of dictionaries
-    journal_entries = load_entries()
     # Add the new entry to the beginning of the list, to preserve its cronological order
     journal_entries = [new_journal_entry] + journal_entries
     save(journal_entries)
@@ -214,6 +210,8 @@ def edit(
                 entry.content = new_content
                 print("\u2705 New content saved:  ")
                 print(f"{new_content}")
+                break
+        # TODO see if using a context manager can be useful here, as well
         save(journal_entries)
 
 
@@ -331,26 +329,38 @@ def populate(num_items: int) -> None:
     if num_items > MAX_ITEMS:
         print(f"Please, choose a number of items not greater than {MAX_ITEMS}.")
     else:
-        random_num = random.randint(0, 20)
         fake = Faker()
         Faker.seed()
         journal_entries = load_entries()
-        # Get num_items new entries, randomly, from Faker
-        for _ in range(random_num, random_num + num_items):
+        counter = 0
+        # new_journal_entries = []
+        while counter < num_items:
             new_title = fake.company()
-            tags = fake.bs()
-            if not any(new_title in entry.title for entry in journal_entries):
+            new_company = fake.catch_phrase()
+            new_tags = fake.bs()
+
+            try:
                 new_journal_entry = JournalEntry.create(
-                    fake.company(), fake.catch_phrase()
+                    new_title, new_company, journal_entries
                 )
-                new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
-                    timespec="seconds"
-                )
-                tags = [tag.strip() for tag in tags.split(" ") if tag.strip()]
-                new_journal_entry.tags = tags
-                journal_entries = [new_journal_entry] + journal_entries
-            save(journal_entries)
-        print("\u2705 Journal populated.")
+            except EntryAlreadyExists:
+                print("Entry already exists. Skipping...")
+                continue
+            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                timespec="seconds"
+            )
+            tags = [tag.strip() for tag in new_tags.split(" ") if tag.strip()]
+            new_journal_entry.tags = tags
+            # Use list addition to preserve the chronological order of insertions
+            journal_entries = [new_journal_entry] + journal_entries
+            counter += 1
+        save(journal_entries)
+        if counter != num_items:
+            print(
+                f"\u2705 Journal populated with {counter} new entries (requested {num_items}; some duplicates were skipped)."
+            )
+        else:
+            print(f"\u2705 Journal populated with {counter} new entries.")
 
 
 if __name__ == "__main__":
