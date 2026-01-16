@@ -68,7 +68,7 @@ class JournalEntry:
 
     @classmethod
     def create(cls, title: str, content: str):
-        existing_entries = load_entry()
+        existing_entries = load_entries()
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
             raise EntryAlreadyExists("An entry with this title already exists.")
         entry_id = next_entry_id(existing_entries)
@@ -102,7 +102,7 @@ def save(entries: list[JournalEntry]) -> None:
         json.dump(journal_entries, write_file, indent=4)
 
 
-def load_entry() -> list[JournalEntry]:
+def load_entries() -> list[JournalEntry]:
     """
     Load journal entries from the JSON file.
     """
@@ -143,7 +143,7 @@ def add(
         print("Please, insert a title and the content in your journal entry.")
 
     # Load the JSON content as a list of dictionaries
-    journal_entries = load_entry()
+    journal_entries = load_entries()
     # Add the new entry to the beginning of the list, to preserve its cronological order
     journal_entries = [new_journal_entry] + journal_entries
     save(journal_entries)
@@ -160,7 +160,7 @@ def display(
     """
 
     # Load entries
-    entries = load_entry()
+    entries = load_entries()
     # Print a message to the user to let know there's no entry yet
     if not entries:
         print("No entries yet in Dev Journal.")
@@ -194,7 +194,7 @@ def edit(
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entry()
+    journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the ID passed by the user is found in an entry value.
     if not any(entry_id in entry.id for entry in journal_entries):
@@ -226,7 +226,7 @@ def delete(
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entry()
+    journal_entries = load_entries()
     # Iterate through the dictionaries in the journal_entries list.
     # Check if the ID passed by the user is found in an entry value.
     if not any(entry_id in entry.id for entry in journal_entries):
@@ -254,7 +254,7 @@ def search(
     Search for string matching in entry titles, content and tags.
     """
 
-    journal_entries = load_entry()
+    journal_entries = load_entries()
     # If the option "titles_ony" is True, limit the search results to titles
     if titles_only:
         search_results = [
@@ -294,7 +294,7 @@ def stats() -> None:
     Show some overall stats: total entries, counts by tag, average content length, most common tag.
     """
 
-    entries = load_entry()
+    entries = load_entries()
     total = len(entries)
     print(f"\nNumber of entries: {total}")
     print("-" * 50)
@@ -330,7 +330,7 @@ def populate(num_items: int) -> None:
         random_num = random.randint(0, 20)
         fake = Faker()
         Faker.seed()
-        journal_entries = load_entry()
+        journal_entries = load_entries()
         # Get num_items new entries, randomly, from Faker
         for _ in range(random_num, random_num + num_items):
             new_title = fake.company()
