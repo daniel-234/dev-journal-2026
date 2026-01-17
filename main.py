@@ -1,8 +1,10 @@
 import json
-import random
+from collections import Counter
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Annotated
 
 import typer
 from faker import Faker
@@ -13,6 +15,8 @@ DB_FILE.touch(exist_ok=True)
 TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
 MAX_ID = 99999
+FIRST_ID = "00001"
+MAX_ITEMS = 50
 
 app = typer.Typer()
 
@@ -33,6 +37,10 @@ class MaximumNumberOfEntries(Exception):
     """Maximum number of journal entries reached"""
 
 
+class EntryNotFoundException(Exception):
+    """No entry was found with this ID"""
+
+
 # 📝 Define a JournalEntry class with title, content, and date
 @dataclass
 class JournalEntry:
@@ -47,43 +55,52 @@ class JournalEntry:
     # The 'default_factory' parameter accepts a function that returns an initial value
     # that needs to be computed dynamically, such as a timestamp.
     # Use an anonymous inline lambda function to compute the timestamp.
-    timestamp: datetime = field(
-        default_factory=lambda: f"{datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")}"
-    )
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Add support for tags in entries
+    tags: list[str] = field(default_factory=list)
 
     # Check if title or content length are too long at construction
     def __post_init__(self):
         if len(self.title) > TITLE_LENGTH:
-            raise TitleTooLongException(
-                "Title must not exceed TITLE_LENGTH charatcers."
+            old_title = self.title
+            self.title = self.title[:TITLE_LENGTH]
+            print(
+                f"Title {old_title} exceeded {TITLE_LENGTH} characters and was truncated to {self.title}"
             )
         if len(self.content) > CONTENT_LENGTH:
-            raise ContentTooLongException(
-                "Content must not exceed CONTENT_LENGTH characters."
+            old_content = self.content
+            self.content = self.content[:CONTENT_LENGTH]
+            print(
+                f"Content {old_content} exceeded {CONTENT_LENGTH} characters and was truncated to {self.content}."
             )
 
     @classmethod
-    def create(cls, title: str, content: str):
-        existing_entries = load_entries()
+    def create(
+        cls, title: str, content: str, existing_entries: list["JournalEntry"]
+    ) -> "JournalEntry":
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
-            raise EntryAlreadyExists
+            raise EntryAlreadyExists("An entry with this title already exists.")
         entry_id = next_entry_id(existing_entries)
         return cls(id=entry_id, title=title, content=content)
 
 
-def next_entry_id(existing_entries: list[JournalEntry]) -> str:
-    """ "
-    Add human-friendly, unique and ordered IDs to each entry with no more than 5 digits
-
-    Args:
-        existing_entries: list[JournalEntry]: a list of the existing entries.
-
-    Returns:
-        str: A unique ID with 5 digits, 0 padded and right aligned, increased
-             by 1 regarding to the maximum ID already created.
+@contextmanager
+def journal_repo():
     """
+    Abstract loading and saving into a context manager.
+    """
+    journal_entries = load_entries()
+    yield journal_entries
+    save(journal_entries)
+
+
+def next_entry_id(existing_entries: list[JournalEntry]) -> str:
+    """
+    Add human-friendly, unique and ordered IDs to each entry with no more than 5 digits
+    """
+
     if not existing_entries:
-        return "00001"
+        return FIRST_ID
 
     max_id = max(int(entry.id) for entry in existing_entries)
     if max_id >= MAX_ID:
@@ -93,16 +110,11 @@ def next_entry_id(existing_entries: list[JournalEntry]) -> str:
     return f"{max_id + 1:05d}"
 
 
-def save_entries(entries: list[JournalEntry]) -> None:
+def save(entries: list[JournalEntry]) -> None:
     """
     Save entries to the JSON file.
-
-    Args:
-        entries (list[JournalEntry]): A list of entries.
-
-    Returns:
-        None
     """
+
     with open(DB_FILE, mode="w", encoding="utf-8") as write_file:
         # Convert each "entry" object to a dictionary to be serializable
         journal_entries = [asdict(entry) for entry in entries]
@@ -112,17 +124,8 @@ def save_entries(entries: list[JournalEntry]) -> None:
 def load_entries() -> list[JournalEntry]:
     """
     Load journal entries from the JSON file.
-
-    Args:
-        None
-
-    Returns:
-        list[JournalEntry]: a list of JournalEntry objects.
-
-    Raises:
-        JSONDecodeError: If the data being deserialized is not valid JSON.
-        FileNotFoundError: If a JSON file has not yet been created.
     """
+
     with open(DB_FILE, mode="r") as read_file:
         try:
             # Load the entries from the Dev Journal as a list of JournalEntry objects
@@ -134,153 +137,241 @@ def load_entries() -> list[JournalEntry]:
 
 
 @app.command()
-def add_entry() -> None:
+def add(
+    title: Annotated[str, typer.Argument(help="Insert a title for this entry.")],
+    content: Annotated[str, typer.Argument(help="Insert a content for this entry.")],
+    tags: Annotated[str, typer.Argument(help="Insert tags (comma separated).")],
+) -> None:
     """
     Create a new journal entry and save it to the JSON file, at the beginning of the list.
-
-    Args:
-        title (str): The title of the entry to add.
-        content (str): The content of the entry to add.
-
-    Returns:
-        None
-
-    Raises:
-        TypeError: If at least one argument is missing.
     """
-    title = input("Title: ")
+
     if not title:
         raise ValueError("Please, insert a title for the entry.")
-    content = input("Content: ")
     if not content:
         raise ValueError("Please, intert some content for this entry.")
-    try:
-        new_journal_entry = JournalEntry.create(title, content)
-        print("\u2705 Entry saved.")
-    except TypeError:
-        print("Please, insert a title and the content in your journal entry.")
-    # Load the JSON content as a list of dictionaries
-    journal_entries = load_entries()
-    # Add the new entry to the beginning of the list, to preserve its cronological order
-    journal_entries = [new_journal_entry] + journal_entries
-    save_entries(journal_entries)
+    tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    # Use the context manager to load and save the entries
+    with journal_repo() as journal_entries:
+        try:
+            new_journal_entry = JournalEntry.create(title, content, journal_entries)
+            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                timespec="seconds"
+            )
+            new_journal_entry.tags = tags
+            # Mutate the list in place with "insert" to persist the object yielded
+            journal_entries.insert(0, new_journal_entry)
+            print("\u2705 Entry saved.")
+        except TypeError:
+            print("Please, insert a title and the content in your journal entry.")
 
 
 @app.command()
-def list_entries() -> None:
+def display(
+    tags: list[str] = typer.Option(
+        default=[], help="Match only entries with any of the given tags"
+    ),
+) -> None:
     """
     Print all journal entries to the console.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
+
     # Load entries
     entries = load_entries()
     # Print a message to the user to let know there's no entry yet
     if not entries:
         print("No entries yet in Dev Journal.")
-    for count, entry in enumerate(entries, start=1):
+    if tags:
+        # Match an entry from entries if any given 'query_tag' in the given tags list is a tag to that entry
+        entries = [
+            entry
+            for entry in entries
+            if any(
+                query_tag.lower() in map(str.lower, entry.tags) for query_tag in tags
+            )
+        ]
+    for entry in entries:
+        print("\n")
         print("-" * 70)
         print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
         print("-" * 70)
-        print(f"{entry.content}\n")
+        print(f"{entry.content}")
+        print("-" * 70)
+        print(f"tags: {entry.tags}\n")
 
 
 @app.command()
-def edit_entry() -> None | str:
+def edit(
+    entry_id: Annotated[str, typer.Argument(help="Entry ID to edit")],
+) -> None | str:
     """
     Edit an entry content given its ID.
-
-    Args:
-        None
-
-    Returns:
-        None | str: If the ID is not found in the journal, print a message
-                    to the user; otherwise don't return anything.
     """
-    entry_id = input("Type the ID of the entry you want to edit: ")
+
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entries()
-    # Iterate through the dictionaries in the journal_entries list.
-    # Check if the ID passed by the user is found in an entry value.
-    if not any(entry_id in entry.id for entry in journal_entries):
-        # If there is no entry with this ID, print a message to the screen.
-        print("No entry was found with this ID")
-    else:
-        # Check each entry dictionary in the list.
-        for entry in journal_entries:
-            # If the ID of the current entry is the same as the one
-            # typed by the user, ask the user for the content to update this entry.
-            if entry.id == entry_id:
-                new_content = input(
-                    f"Insert the new content for the entry {entry.title}:  "
-                )
-                entry.content = new_content
-                print("\u2705 New content saved:  ")
-                print(f"{new_content}")
-        save_entries(journal_entries)
+    with journal_repo() as journal_entries:
+        if not any(entry_id in entry.id for entry in journal_entries):
+            # If there is no entry with this ID, print a message to the screen.
+            print("No entry was found with this ID")
+        else:
+            # Iterate through the dictionaries in the journal_entries list.
+            # Check if the ID passed by the user is found in an entry value.
+            for entry in journal_entries:
+                # If the ID of the current entry is the same as the one
+                # typed by the user, ask the user for the content to update this entry.
+                if entry.id == entry_id:
+                    new_content = input(
+                        f"Insert the new content for the entry {entry.title}:  "
+                    )
+                    entry.content = new_content
+                    print("\u2705 New content saved:  ")
+                    print(f"{new_content}")
+                    break
 
 
 @app.command()
-def delete_entry() -> None | str:
+def delete(
+    entry_id: Annotated[str, typer.Argument(help="Entry ID to delete")],
+) -> None | str:
     """
     Delete an entry given its ID.
-
-    Args:
-        None
-
-    Returns:
-        None | str: If the ID is not in the journal, print a message
-                    to inform the user; don't return anything otherwise.
     """
-    entry_id = input("Type the ID of the entry you want to delete: ")
+
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entries()
-    # Iterate through the dictionaries in the journal_entries list.
-    # Check if the ID passed by the user is found in an entry value.
-    if not any(entry_id in entry.id for entry in journal_entries):
-        # If there is no entry with this ID, print a message to the screen.
-        print("No entry was found with this ID.")
-    else:
-        # Check each entry dictionary in the list.
-        for entry in journal_entries:
-            # If the ID of the current entry is the same as the one
-            # typed by the user, delete this entry from the list.
-            if entry.id == entry_id:
-                journal_entries.remove(entry)
-                print("\u2702 \u27a1 \u274e  Entry removed.")
-        save_entries(journal_entries)
+    with journal_repo() as journal_entries:
+        if not any(entry_id in entry.id for entry in journal_entries):
+            # If there is no entry with this ID, print a message to the screen.
+            print("No entry was found with this ID")
+        else:
+            # Iterate through the dictionaries in the journal_entries list.
+            # Check if the ID passed by the user is found in an entry value.
+            for entry in journal_entries:
+                # If the ID of the current entry is the same as the one
+                # typed by the user, delete this entry from the list.
+                if entry.id == entry_id:
+                    journal_entries.remove(entry)
+                    print("\u2702 \u27a1 \u274e  Entry removed.")
+                    break
 
 
 @app.command()
-def populate_journal() -> None:
+def search(
+    query: str,
+    titles_only: bool = typer.Option(
+        default=False, help="Limit your search results to tile only"
+    ),
+) -> list[JournalEntry]:
+    """
+    Search for string matching in entry titles, content and tags.
+    """
+
+    journal_entries = load_entries()
+    # If the option "titles_ony" is True, limit the search results to titles
+    if titles_only:
+        search_results = [
+            entry for entry in journal_entries if query.lower() in entry.title.lower()
+        ]
+    # If the option "titles_only" is False, show results from content and tags, as well
+    else:
+        title_results = [
+            entry for entry in journal_entries if query.lower() in entry.title.lower()
+        ]
+        content_results = [
+            entry
+            for entry in journal_entries
+            if query.lower() in entry.content.lower() and entry not in title_results
+        ]
+        tags_results = [
+            entry
+            for entry in journal_entries
+            if any(query.lower() in tag.lower() for tag in entry.tags)
+            and entry not in content_results
+        ]
+        search_results = title_results + content_results + tags_results
+
+    for entry in search_results:
+        print("\n")
+        print("-" * 70)
+        print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
+        print("-" * 70)
+        print(f"{entry.content}")
+        print("-" * 70)
+        print(f"tags: {entry.tags}\n")
+
+
+@app.command()
+def stats() -> None:
+    """
+    Show some overall stats: total entries, counts by tag, average content length, most common tag.
+    """
+
+    entries = load_entries()
+    total = len(entries)
+    print(f"\nNumber of entries: {total}")
+    print("-" * 50)
+    tags = []
+    for entry in entries:
+        tags = tags + [tag for tag in entry.tags]
+    by_tag = Counter(tags).most_common()
+    if len(by_tag) > 0:
+        print("\nCounts by tag: \n")
+    for value, count in by_tag:
+        print(value, count)
+    if by_tag:
+        most_common = [value for value, count in by_tag if count == by_tag[0][1]]
+        # As by_tag is not empty, we can get the count of occurrences of the most common item
+        # by retrieving the second element of the first item.
+        higher_freq = by_tag[0][1]
+        contents = [len(value) for value, count in by_tag]
+        average_content_length = sum(contents) / len(contents)
+        print("*" * 50)
+        print(f"\nAverage content length: {round(average_content_length)}")
+        print(f"\nMost common tag(s): {most_common} that appears {higher_freq} times.")
+
+
+@app.command()
+def populate(num_items: int) -> None:
     """
     Populate the journal with fake content.
-
-    Args:
-        None
-
-    Returns:
-        None
     """
-    random_num = random.randint(0, 20)
-    fake = Faker()
-    Faker.seed()
-    journal_entries = load_entries()
-    # Get 5 new entries, randomly, from Faker
-    for _ in range(random_num, random_num + 5):
-        new_title = fake.company()
-        if not any(new_title in entry.title for entry in journal_entries):
-            new_journal_entry = JournalEntry.create(fake.company(), fake.catch_phrase())
-            journal_entries = [new_journal_entry] + journal_entries
-        save_entries(journal_entries)
+
+    if num_items > MAX_ITEMS:
+        print(f"Please, choose a number of items not greater than {MAX_ITEMS}.")
+    else:
+        fake = Faker()
+        Faker.seed()
+        with journal_repo() as journal_entries:
+            counter = 0
+            while counter < num_items:
+                new_title = fake.company()
+                new_company = fake.catch_phrase()
+                new_tags = fake.bs()
+
+                try:
+                    new_journal_entry = JournalEntry.create(
+                        new_title, new_company, journal_entries
+                    )
+                except EntryAlreadyExists:
+                    print("Entry already exists. Skipping...")
+                    continue
+                new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                    timespec="seconds"
+                )
+                tags = [tag.strip() for tag in new_tags.split(" ") if tag.strip()]
+                new_journal_entry.tags = tags
+                journal_entries.insert(0, new_journal_entry)
+                counter += 1
+
+            if counter != num_items:
+                print(
+                    f"\u2705 Journal populated with {counter} new entries (requested {num_items}; some duplicates were skipped)."
+                )
+            else:
+                print(f"\u2705 Journal populated with {counter} new entries.")
 
 
 if __name__ == "__main__":
