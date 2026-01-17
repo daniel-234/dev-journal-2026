@@ -1,5 +1,6 @@
 import json
 from collections import Counter
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -34,6 +35,10 @@ class EntryAlreadyExists(Exception):
 
 class MaximumNumberOfEntries(Exception):
     """Maximum number of journal entries reached"""
+
+
+class EntryNotFoundException(Exception):
+    """No entry was found with this ID"""
 
 
 # 📝 Define a JournalEntry class with title, content, and date
@@ -73,6 +78,16 @@ class JournalEntry:
             raise EntryAlreadyExists("An entry with this title already exists.")
         entry_id = next_entry_id(existing_entries)
         return cls(id=entry_id, title=title, content=content)
+
+
+@contextmanager
+def journal_repo():
+    """
+    Abstract loading and saving into a context manager.
+    """
+    journal_entries = load_entries()
+    yield journal_entries
+    save(journal_entries)
 
 
 def next_entry_id(existing_entries: list[JournalEntry]) -> str:
@@ -132,19 +147,19 @@ def add(
     if not content:
         raise ValueError("Please, intert some content for this entry.")
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
-    journal_entries = load_entries()
-    try:
-        new_journal_entry = JournalEntry.create(title, content, journal_entries)
-        new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
-            timespec="seconds"
-        )
-        new_journal_entry.tags = tags
-        print("\u2705 Entry saved.")
-    except TypeError:
-        print("Please, insert a title and the content in your journal entry.")
-    # Add the new entry to the beginning of the list, to preserve its cronological order
-    journal_entries = [new_journal_entry] + journal_entries
-    save(journal_entries)
+    # Use the context manager to load and save the entries
+    with journal_repo() as journal_entries:
+        try:
+            new_journal_entry = JournalEntry.create(title, content, journal_entries)
+            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                timespec="seconds"
+            )
+            new_journal_entry.tags = tags
+            # Mutate the list in place with "insert" to persist the object yielded
+            journal_entries.insert(0, new_journal_entry)
+            print("\u2705 Entry saved.")
+        except TypeError:
+            print("Please, insert a title and the content in your journal entry.")
 
 
 @app.command()
@@ -192,27 +207,24 @@ def edit(
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entries()
-    # Iterate through the dictionaries in the journal_entries list.
-    # Check if the ID passed by the user is found in an entry value.
-    if not any(entry_id in entry.id for entry in journal_entries):
-        # If there is no entry with this ID, print a message to the screen.
-        print("No entry was found with this ID")
-    else:
-        # Check each entry dictionary in the list.
-        for entry in journal_entries:
-            # If the ID of the current entry is the same as the one
-            # typed by the user, ask the user for the content to update this entry.
-            if entry.id == entry_id:
-                new_content = input(
-                    f"Insert the new content for the entry {entry.title}:  "
-                )
-                entry.content = new_content
-                print("\u2705 New content saved:  ")
-                print(f"{new_content}")
-                break
-        # TODO see if using a context manager can be useful here, as well
-        save(journal_entries)
+    with journal_repo() as journal_entries:
+        if not any(entry_id in entry.id for entry in journal_entries):
+            # If there is no entry with this ID, print a message to the screen.
+            print("No entry was found with this ID")
+        else:
+            # Iterate through the dictionaries in the journal_entries list.
+            # Check if the ID passed by the user is found in an entry value.
+            for entry in journal_entries:
+                # If the ID of the current entry is the same as the one
+                # typed by the user, ask the user for the content to update this entry.
+                if entry.id == entry_id:
+                    new_content = input(
+                        f"Insert the new content for the entry {entry.title}:  "
+                    )
+                    entry.content = new_content
+                    print("\u2705 New content saved:  ")
+                    print(f"{new_content}")
+                    break
 
 
 @app.command()
@@ -226,23 +238,20 @@ def delete(
     if not entry_id:
         raise ValueError("No ID typed.")
     # Load the entries from the dev journal, if any.
-    journal_entries = load_entries()
-    # Iterate through the dictionaries in the journal_entries list.
-    # Check if the ID passed by the user is found in an entry value.
-    if not any(entry_id == entry.id for entry in journal_entries):
-        # If there is no entry with this ID, print a message to the screen.
-        print("No entry was found with this ID.")
-        raise typer.Exit()
-    # Check each entry dictionary in the list.
-    for entry in journal_entries:
-        # If the ID of the current entry is the same as the one
-        # typed by the user, delete this entry from the list.
-        if entry.id == entry_id:
-            journal_entries.remove(entry)
-            print("\u2702 \u27a1 \u274e  Entry removed.")
-            # TODO See if using a context manager for loading and saving can simplify this.
-            save(journal_entries)
-            break
+    with journal_repo() as journal_entries:
+        if not any(entry_id in entry.id for entry in journal_entries):
+            # If there is no entry with this ID, print a message to the screen.
+            print("No entry was found with this ID")
+        else:
+            # Iterate through the dictionaries in the journal_entries list.
+            # Check if the ID passed by the user is found in an entry value.
+            for entry in journal_entries:
+                # If the ID of the current entry is the same as the one
+                # typed by the user, delete this entry from the list.
+                if entry.id == entry_id:
+                    journal_entries.remove(entry)
+                    print("\u2702 \u27a1 \u274e  Entry removed.")
+                    break
 
 
 @app.command()
@@ -331,36 +340,34 @@ def populate(num_items: int) -> None:
     else:
         fake = Faker()
         Faker.seed()
-        journal_entries = load_entries()
-        counter = 0
-        # new_journal_entries = []
-        while counter < num_items:
-            new_title = fake.company()
-            new_company = fake.catch_phrase()
-            new_tags = fake.bs()
+        with journal_repo() as journal_entries:
+            counter = 0
+            while counter < num_items:
+                new_title = fake.company()
+                new_company = fake.catch_phrase()
+                new_tags = fake.bs()
 
-            try:
-                new_journal_entry = JournalEntry.create(
-                    new_title, new_company, journal_entries
+                try:
+                    new_journal_entry = JournalEntry.create(
+                        new_title, new_company, journal_entries
+                    )
+                except EntryAlreadyExists:
+                    print("Entry already exists. Skipping...")
+                    continue
+                new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
+                    timespec="seconds"
                 )
-            except EntryAlreadyExists:
-                print("Entry already exists. Skipping...")
-                continue
-            new_journal_entry.timestamp = new_journal_entry.timestamp.isoformat(
-                timespec="seconds"
-            )
-            tags = [tag.strip() for tag in new_tags.split(" ") if tag.strip()]
-            new_journal_entry.tags = tags
-            # Use list addition to preserve the chronological order of insertions
-            journal_entries = [new_journal_entry] + journal_entries
-            counter += 1
-        save(journal_entries)
-        if counter != num_items:
-            print(
-                f"\u2705 Journal populated with {counter} new entries (requested {num_items}; some duplicates were skipped)."
-            )
-        else:
-            print(f"\u2705 Journal populated with {counter} new entries.")
+                tags = [tag.strip() for tag in new_tags.split(" ") if tag.strip()]
+                new_journal_entry.tags = tags
+                journal_entries.insert(0, new_journal_entry)
+                counter += 1
+
+            if counter != num_items:
+                print(
+                    f"\u2705 Journal populated with {counter} new entries (requested {num_items}; some duplicates were skipped)."
+                )
+            else:
+                print(f"\u2705 Journal populated with {counter} new entries.")
 
 
 if __name__ == "__main__":
