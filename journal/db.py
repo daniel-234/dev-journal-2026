@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from dataclasses import asdict
 from pathlib import Path
 
-from models import JournalEntry
+from journal.models import JournalEntry
 
 DB_FILE = Path("journal.json")
 DB_FILE.touch(exist_ok=True)

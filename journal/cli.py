@@ -2,9 +2,10 @@ from collections import Counter
 from typing import Annotated
 
 import typer
-from db import journal_repo, load_entries
 from faker import Faker
-from models import EntryAlreadyExists, JournalEntry
+
+from journal.db import journal_repo, load_entries
+from journal.models import EntryAlreadyExists, JournalEntry
 
 MAX_ITEMS = 50
 
