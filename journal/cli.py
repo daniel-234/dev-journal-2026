@@ -28,9 +28,11 @@ def add(
     """
 
     if not title:
-        raise ValueError("Please, insert a title for the entry.")
+        typer.echo("Please, insert a title for the entry.")
+        raise typer.Exit()
     if not content:
-        raise ValueError("Please, intert some content for this entry.")
+        typer.echo("Please, intert some content for this entry.")
+        raise typer.Exit()
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
 
     # Instantiate a Database object
@@ -60,12 +62,13 @@ def edit(
     """
 
     if not entry_id:
-        raise ValueError("No ID typed.")
+        typer.echo("No ID typed.")
+        raise typer.Exit("No")
     # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
     with db.session() as journal_entries:
-        if not any(entry_id in entry.id for entry in journal_entries):
+        if not any(entry_id == entry.id for entry in journal_entries):
             # If there is no entry with this ID, print a message to the screen.
             print("No entry was found with this ID")
         else:
