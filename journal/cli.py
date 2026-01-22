@@ -46,7 +46,7 @@ def add(
             )
             new_journal_entry.tags = tags
             # Mutate the list in place with "insert" to persist the object yielded
-            journal_entries.insert(0, new_journal_entry)
+            journal_entries.append(new_journal_entry)
             print("\u2705 Entry saved.")
         except TypeError:
             print("Please, insert a title and the content in your journal entry.")
@@ -135,6 +135,10 @@ def display(
         # Print a message to the user to let know there's no entry yet
         if not journal_entries:
             print("No entries yet in Dev Journal.")
+            raise typer.Exit()
+        journal_entries = sorted(
+            journal_entries, key=lambda entry: entry.id, reverse=True
+        )
         if tags:
             # Match an entry from entries if any given 'query_tag' in the given tags list is a tag to that entry
             journal_entries = [
@@ -272,7 +276,7 @@ def populate(num_items: int, file: Path = DEFAULT_DB_FILE) -> None:
                 )
                 tags = [tag.strip() for tag in new_tags.split(" ") if tag.strip()]
                 new_journal_entry.tags = tags
-                journal_entries.insert(0, new_journal_entry)
+                journal_entries.append(new_journal_entry)
                 counter += 1
 
             if counter != num_items:
