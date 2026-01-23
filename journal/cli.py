@@ -220,15 +220,19 @@ def stats(file: Path = DEFAULT_DB_FILE) -> None:
     # Instantiate a Database object
     db = JournalDatabase(file)
     with db.session() as journal_entries:
+        if not journal_entries:
+            print("No entries yet in Dev Journal.")
+            raise typer.Exit()
         total = len(journal_entries)
         print(f"\nNumber of entries: {total}")
         print("-" * 50)
         tags = []
+        contents_length = []
         for entry in journal_entries:
             tags = tags + [tag for tag in entry.tags]
+            contents_length.append(len(entry.content))
         by_tag = Counter(tags).most_common()
-        if len(by_tag) > 0:
-            print("\nCounts by tag: \n")
+        print("\nCounts by tag: \n")
         for value, count in by_tag:
             print(value, count)
         if by_tag:
@@ -236,12 +240,11 @@ def stats(file: Path = DEFAULT_DB_FILE) -> None:
             # As by_tag is not empty, we can get the count of occurrences of the most common item
             # by retrieving the second element of the first item.
             higher_freq = by_tag[0][1]
-            contents = [len(value) for value, count in by_tag]
-            average_content_length = sum(contents) / len(contents)
+            average_content_length = sum(contents_length) / len(contents_length)
             print("*" * 50)
             print(f"\nAverage content length: {round(average_content_length)}")
             print(
-                f"\nMost common tag(s): {most_common} that appears {higher_freq} times."
+                f"\nMost common tag{'s' if len(most_common) > 1 else ''}: {most_common} that appear{'s' if len(most_common) == 1 else ''} {higher_freq} times."
             )
 
 
