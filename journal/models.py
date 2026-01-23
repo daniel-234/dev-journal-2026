@@ -36,17 +36,10 @@ class JournalEntry:
     # Check if title or content length are too long at construction
     def __post_init__(self):
         if len(self.title) > TITLE_LENGTH:
-            old_title = self.title
             self.title = self.title[:TITLE_LENGTH]
-            print(
-                f"Title {old_title} exceeded {TITLE_LENGTH} characters and was truncated to {self.title}"
-            )
+
         if len(self.content) > CONTENT_LENGTH:
-            old_content = self.content
             self.content = self.content[:CONTENT_LENGTH]
-            print(
-                f"Content {old_content} exceeded {CONTENT_LENGTH} characters and was truncated to {self.content}."
-            )
 
     @classmethod
     def create(

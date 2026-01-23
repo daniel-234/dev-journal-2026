@@ -6,7 +6,12 @@ import typer
 from faker import Faker
 
 from journal.db import JournalDatabase
-from journal.models import EntryAlreadyExists, JournalEntry
+from journal.models import (
+    CONTENT_LENGTH,
+    TITLE_LENGTH,
+    EntryAlreadyExists,
+    JournalEntry,
+)
 
 MAX_ITEMS = 50
 
@@ -163,7 +168,7 @@ def display(
 def search(
     query: str,
     titles_only: bool = typer.Option(
-        default=False, help="Limit your search results to tile only"
+        default=False, help="Limit your search results to title only"
     ),
     file: Path = DEFAULT_DB_FILE,
 ) -> list[JournalEntry]:
@@ -264,13 +269,21 @@ def populate(num_items: int, file: Path = DEFAULT_DB_FILE) -> None:
             counter = 0
             while counter < num_items:
                 new_title = fake.company()
-                new_company = fake.catch_phrase()
+                new_content = fake.catch_phrase()
                 new_tags = fake.bs()
 
                 try:
                     new_journal_entry = JournalEntry.create(
-                        new_title, new_company, journal_entries
+                        new_title, new_content, journal_entries
                     )
+                    if len(new_title) > TITLE_LENGTH:
+                        print(
+                            f"Title {new_title} exceeded {TITLE_LENGTH} characters and was truncated to {new_title[:TITLE_LENGTH]}"
+                        )
+                    if len(new_content) > CONTENT_LENGTH:
+                        print(
+                            f"Content {TITLE_LENGTH} exceeded {CONTENT_LENGTH} characters and was truncated to {TITLE_LENGTH}."
+                        )
                 except EntryAlreadyExists:
                     print("Entry already exists. Skipping...")
                     continue
