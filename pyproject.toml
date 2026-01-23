@@ -14,3 +14,17 @@ dependencies = [
 dev = [
     "pytest>=9.0.2",
 ]
+
+[project.scripts]
+journal = "journal.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["journal/"]
+exclude = [
+  "/.*",
+  "/tests"
+]

@@ -32,12 +32,6 @@ def add(
     Create a new journal entry and save it to the JSON file, at the beginning of the list.
     """
 
-    if not title:
-        typer.echo("Please, insert a title for the entry.")
-        raise typer.Exit()
-    if not content:
-        typer.echo("Please, intert some content for this entry.")
-        raise typer.Exit()
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
 
     # Instantiate a Database object
@@ -66,9 +60,6 @@ def edit(
     Edit an entry content given its ID.
     """
 
-    if not entry_id:
-        typer.echo("No ID typed.")
-        raise typer.Exit("No")
     # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
@@ -76,6 +67,7 @@ def edit(
         if not any(entry_id == entry.id for entry in journal_entries):
             # If there is no entry with this ID, print a message to the screen.
             print("No entry was found with this ID")
+            raise typer.Exit()
         else:
             # Iterate through the dictionaries in the journal_entries list.
             # Check if the ID passed by the user is found in an entry value.
