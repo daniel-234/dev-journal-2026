@@ -5,6 +5,7 @@ from typing import Annotated
 import typer
 from faker import Faker
 
+from journal.console import console, table
 from journal.db import JournalDatabase
 from journal.models import (
     CONTENT_LENGTH,
@@ -127,6 +128,7 @@ def display(
 
     # Instantiate a Database object
     db = JournalDatabase(file)
+
     # Load entries
     with db.session() as journal_entries:
         # Print a message to the user to let know there's no entry yet
@@ -147,6 +149,15 @@ def display(
                 )
             ]
         for entry in journal_entries:
+            time = f"{entry.timestamp[:4]}-{entry.timestamp[5:7]}-{entry.timestamp[8:10]} {entry.timestamp[11:13]}:{entry.timestamp[14:16]}:{entry.timestamp[17:19]}"
+            table.add_row(
+                entry.id,
+                entry.title.title(),
+                entry.content,
+                ", ".join(entry.tags),
+                time,
+            )
+            """
             print("\n")
             print("-" * 70)
             print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
@@ -154,6 +165,8 @@ def display(
             print(f"{entry.content}")
             print("-" * 70)
             print(f"tags: {entry.tags}\n")
+            """
+    console.print(table)
 
 
 @app.command()
