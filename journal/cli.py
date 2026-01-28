@@ -94,15 +94,14 @@ def delete(
     Delete an entry given its ID.
     """
 
-    if not entry_id:
-        raise ValueError("No ID typed.")
     # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
     with db.session() as journal_entries:
-        if not any(entry_id in entry.id for entry in journal_entries):
+        if not any(entry_id == entry.id for entry in journal_entries):
             # If there is no entry with this ID, print a message to the screen.
             print("No entry was found with this ID")
+            raise typer.Exit()
         else:
             # Iterate through the dictionaries in the journal_entries list.
             # Check if the ID passed by the user is found in an entry value.
@@ -128,7 +127,6 @@ def display(
 
     # Instantiate a Database object
     db = JournalDatabase(file)
-
     # Load entries
     with db.session() as journal_entries:
         # Print a message to the user to let know there's no entry yet
@@ -157,15 +155,6 @@ def display(
                 ", ".join(entry.tags),
                 time,
             )
-            """
-            print("\n")
-            print("-" * 70)
-            print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
-            print("-" * 70)
-            print(f"{entry.content}")
-            print("-" * 70)
-            print(f"tags: {entry.tags}\n")
-            """
     console.print(table)
 
 
@@ -184,6 +173,10 @@ def search(
     # Instantiate a Database object
     db = JournalDatabase(file)
     with db.session() as journal_entries:
+        # Print a message to the user to let know there's no entry yet
+        if not journal_entries:
+            print("No entries yet in Dev Journal.")
+            raise typer.Exit()
         # If the option "titles_ony" is True, limit the search results to titles
         if titles_only:
             search_results = [
@@ -191,6 +184,8 @@ def search(
                 for entry in journal_entries
                 if query.lower() in entry.title.lower()
             ]
+            if not search_results:
+                print(f"No match for {query} with option --titles-only in journal.")
         # If the option "titles_only" is False, show results from content and tags, as well
         else:
             title_results = [
@@ -210,7 +205,9 @@ def search(
                 and entry not in content_results
             ]
             search_results = title_results + content_results + tags_results
-
+            if not search_results:
+                typer.echo(f"No match for {query} in journal.")
+                raise typer.Exit()
         for entry in search_results:
             print("\n")
             print("-" * 70)
@@ -232,7 +229,6 @@ def stats(file: Path = DEFAULT_DB_FILE) -> None:
     with db.session() as journal_entries:
         if not journal_entries:
             print("No entries yet in Dev Journal.")
-            raise typer.Exit()
         total = len(journal_entries)
         print(f"\nNumber of entries: {total}")
         print("-" * 50)
@@ -266,6 +262,7 @@ def populate(num_items: int, file: Path = DEFAULT_DB_FILE) -> None:
 
     if num_items > MAX_ITEMS:
         print(f"Please, choose a number of items not greater than {MAX_ITEMS}.")
+        raise typer.Exit()
     else:
         db = JournalDatabase(file)
         fake = Faker()
