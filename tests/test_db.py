@@ -36,8 +36,9 @@ def test_add_entry(db):
 
 
 def test_edit_no_entries(db):
+    id = 1
     entries = db.load_entries()
-    result = runner.invoke(app, ["edit", "1", "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["edit", str(id), "--file", str(TEST_DB_FILE)])
     assert len(entries) == 0
     assert result.exit_code == 0
     assert "No entry was found with this ID" in result.stdout
@@ -47,7 +48,7 @@ def test_edit(db):
     add("TODO", "Study pytest", "Python, testing", TEST_DB_FILE)
     result = runner.invoke(
         app,
-        ["edit", "00001", "--file", str(TEST_DB_FILE)],
+        ["edit", "1", "--file", str(TEST_DB_FILE)],
         input="Applying tests with Pytest\n",
     )
     assert (
@@ -57,16 +58,18 @@ def test_edit(db):
 
 
 def test_delete_no_entries(db):
+    id = 5
     entries = db.load_entries()
-    result = runner.invoke(app, ["delete", "5", "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["delete", str(id), "--file", str(TEST_DB_FILE)])
     assert len(entries) == 0
     assert result.exit_code == 0
     assert "No entry was found with this ID" in result.stdout
 
 
 def test_delete(db):
+    id = 1
     add("TODO", "Study pytest", "Python, testing", TEST_DB_FILE)
-    result = runner.invoke(app, ["delete", "00001", "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["delete", str(id), "--file", str(TEST_DB_FILE)])
     assert "\u2702 \u27a1 \u274e  Entry removed." in result.stdout
 
 
