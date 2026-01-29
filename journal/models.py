@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
 MAX_ID = 99999
-FIRST_ID = "00001"
+FIRST_ID = "1"
 
 
 class EntryAlreadyExists(Exception):
@@ -64,4 +64,4 @@ def next_entry_id(existing_entries: list[JournalEntry]) -> str:
         raise MaximumNumberOfEntries(
             "You have already reached the maximum number of entries. Please, delete one before adding this new entry."
         )
-    return f"{max_id + 1:05d}"
+    return f"{max_id + 1}"

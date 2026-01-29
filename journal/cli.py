@@ -134,7 +134,7 @@ def display(
             print("No entries yet in Dev Journal.")
             raise typer.Exit()
         journal_entries = sorted(
-            journal_entries, key=lambda entry: entry.id, reverse=True
+            journal_entries, key=lambda entry: int(entry.id), reverse=True
         )
         if tags:
             # Match an entry from entries if any given 'query_tag' in the given tags list is a tag to that entry
