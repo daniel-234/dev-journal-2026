@@ -33,7 +33,6 @@ class JournalDatabase:
                     JournalEntry(**entry) for entry in json.load(read_file)
                 ]
             except (json.decoder.JSONDecodeError, FileNotFoundError):
-                # Create an empty list if the journal is still empty
                 journal_entries = []
         return journal_entries
 

@@ -14,7 +14,6 @@ runner = CliRunner()
 
 @pytest.fixture(scope="function")
 def db():
-    # Instantiate a Database object
     db = JournalDatabase(TEST_DB_FILE)
     yield db
     db.save([])
@@ -36,9 +35,9 @@ def test_add_entry(db):
 
 
 def test_edit_no_entries(db):
-    id = 1
+    entry_id = 1
     entries = db.load_entries()
-    result = runner.invoke(app, ["edit", str(id), "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["edit", str(entry_id), "--file", str(TEST_DB_FILE)])
     assert len(entries) == 0
     assert result.exit_code == 0
     assert "No entry was found with this ID" in result.stdout
@@ -58,18 +57,18 @@ def test_edit(db):
 
 
 def test_delete_no_entries(db):
-    id = 5
+    entry_id = 5
     entries = db.load_entries()
-    result = runner.invoke(app, ["delete", str(id), "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["delete", str(entry_id), "--file", str(TEST_DB_FILE)])
     assert len(entries) == 0
     assert result.exit_code == 0
     assert "No entry was found with this ID" in result.stdout
 
 
 def test_delete(db):
-    id = 1
+    entry_id = 1
     add("TODO", "Study pytest", "Python, testing", TEST_DB_FILE)
-    result = runner.invoke(app, ["delete", str(id), "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["delete", str(entry_id), "--file", str(TEST_DB_FILE)])
     assert "\u2702 \u27a1 \u274e  Entry removed." in result.stdout
 
 
