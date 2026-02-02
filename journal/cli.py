@@ -143,13 +143,12 @@ def display(
                 )
             ]
         for entry in journal_entries:
-            time = f"{entry.timestamp[:4]}-{entry.timestamp[5:7]}-{entry.timestamp[8:10]} {entry.timestamp[11:13]}:{entry.timestamp[14:16]}:{entry.timestamp[17:19]}"
             table.add_row(
                 entry.id,
                 entry.title.title(),
                 entry.content,
                 ", ".join(entry.tags),
-                time,
+                entry.formatted_timestamp,
             )
     console.print(table)
 
