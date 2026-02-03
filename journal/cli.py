@@ -5,7 +5,7 @@ from typing import Annotated
 import typer
 from faker import Faker
 
-from journal.console import console, table
+from journal.console import console, make_table
 from journal.db import JournalDatabase
 from journal.models import (
     CONTENT_LENGTH,
@@ -142,6 +142,7 @@ def display(
                     for query_tag in tags
                 )
             ]
+        table = make_table()
         for entry in journal_entries:
             table.add_row(
                 entry.id,
