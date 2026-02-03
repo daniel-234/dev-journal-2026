@@ -191,6 +191,18 @@ def search(
             if not search_results:
                 print(f"No match for {query} in journal.")
                 raise typer.Exit()
+        table = make_table()
+        for entry in search_results:
+            table.add_row(
+                entry.id,
+                entry.title.title(),
+                entry.content,
+                ", ".join(entry.tags),
+                entry.formatted_timestamp,
+            )
+        console.print(table)
+
+        """
         for entry in search_results:
             print("\n")
             print("-" * 70)
@@ -199,6 +211,7 @@ def search(
             print(f"{entry.content}")
             print("-" * 70)
             print(f"tags: {entry.tags}\n")
+        """
 
 
 @app.command()

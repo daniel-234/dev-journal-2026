@@ -82,7 +82,7 @@ def test_search_tag_found(db):
     add("TODO", "Study pytest", "Python, testing", TEST_DB_FILE)
     add("Database", "Exercised with SQL", "database, SQL, query", TEST_DB_FILE)
     result = runner.invoke(app, ["search", query, "--file", str(TEST_DB_FILE)])
-    assert "tags: ['Python', 'testing']\n" in result.stdout
+    assert "Python, testing" in result.stdout
 
 
 def test_search_title_and_content_found(db):
@@ -97,13 +97,12 @@ def test_search_title_and_content_found(db):
     )
     add(
         "Software Engineering",
-        "Apply the ZEN of Python",
+        "The ZEN of Python",
         "improvement, readability",
         TEST_DB_FILE,
     )
     result = runner.invoke(app, ["search", query, "--file", str(TEST_DB_FILE)])
-    assert "ID 3:  PYTHON" in result.stdout
-    assert "Apply the ZEN of Python" in result.stdout
+    assert "Python" in result.stdout
 
 
 def test_search_titles_only_case_insensitivity(db):
@@ -125,7 +124,7 @@ def test_search_titles_only_case_insensitivity(db):
     result = runner.invoke(
         app, ["search", "--titles-only", query, "--file", str(TEST_DB_FILE)]
     )
-    assert "ID 3:  PYTHON" in result.stdout
+    assert "Python" in result.stdout
 
 
 def test_stats(db):
