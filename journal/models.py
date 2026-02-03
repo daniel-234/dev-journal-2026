@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+import typer
+
 TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
 MAX_ID = 99999
@@ -46,7 +48,8 @@ class JournalEntry:
         cls, title: str, content: str, existing_entries: list["JournalEntry"]
     ) -> "JournalEntry":
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
-            raise EntryAlreadyExists("An entry with this title already exists.")
+            print("An entry with this title already exists.")
+            raise typer.Exit()
         entry_id = next_entry_id(existing_entries)
         return cls(id=entry_id, title=title, content=content)
 
