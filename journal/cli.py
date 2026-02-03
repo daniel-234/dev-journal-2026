@@ -6,7 +6,7 @@ import typer
 from faker import Faker
 
 from journal.console import console, make_table
-from journal.db import JournalDatabase
+from journal.db import JournalDatabase, _entry_matches
 from journal.models import (
     CONTENT_LENGTH,
     TITLE_LENGTH,
@@ -152,18 +152,6 @@ def display(
                 entry.formatted_timestamp,
             )
     console.print(table)
-
-
-def _entry_matches(query: str, entry: JournalEntry) -> bool:
-    query = query.lower()
-    if query in entry.title.lower():
-        return True
-    if query in entry.content.lower():
-        return True
-    # partial match of tags
-    if any(query in tag.lower() for tag in entry.tags):
-        return True
-    return False
 
 
 @app.command()

@@ -61,7 +61,7 @@ def test_search_no_match(db):
     query = "Java"
     add("TODO", "Study pytest", "Python, testing", TEST_DB_FILE)
     add("Database", "Exercised with SQL", "database, SQL, query", TEST_DB_FILE)
-    result = runner.invoke(app, ["search", "Java", "--file", str(TEST_DB_FILE)])
+    result = runner.invoke(app, ["search", query, "--file", str(TEST_DB_FILE)])
     assert f"No match for {query} in journal." in result.stdout
 
 
@@ -75,6 +75,57 @@ def test_search_titles_only_no_match(db):
     assert (
         f"No match for {query} with option --titles-only in journal." in result.stdout
     )
+
+
+def test_search_tag_found(db):
+    query = "Python"
+    add("TODO", "Study pytest", "Python, testing", TEST_DB_FILE)
+    add("Database", "Exercised with SQL", "database, SQL, query", TEST_DB_FILE)
+    result = runner.invoke(app, ["search", query, "--file", str(TEST_DB_FILE)])
+    assert "tags: ['Python', 'testing']\n" in result.stdout
+
+
+def test_search_title_and_content_found(db):
+    query = "Python"
+    add("TODO", "Study pytest", "Pytest, testing", TEST_DB_FILE)
+    add("Database", "Exercised with SQL", "database, SQL, query", TEST_DB_FILE)
+    add(
+        "Python",
+        "Refactor code and finish app",
+        "programming, refactoring",
+        TEST_DB_FILE,
+    )
+    add(
+        "Software Engineering",
+        "Apply the ZEN of Python",
+        "improvement, readability",
+        TEST_DB_FILE,
+    )
+    result = runner.invoke(app, ["search", query, "--file", str(TEST_DB_FILE)])
+    assert "ID 3:  PYTHON" in result.stdout
+    assert "Apply the ZEN of Python" in result.stdout
+
+
+def test_search_titles_only_case_insensitivity(db):
+    query = "pYTHoN"
+    add("TODO", "Study pytest", "Pytest, testing", TEST_DB_FILE)
+    add("Database", "Exercised with SQL", "database, SQL, query", TEST_DB_FILE)
+    add(
+        "Python",
+        "Refactor code and finish app",
+        "programming, refactoring",
+        TEST_DB_FILE,
+    )
+    add(
+        "Software Engineering",
+        "Apply the ZEN of Python",
+        "improvement, readability",
+        TEST_DB_FILE,
+    )
+    result = runner.invoke(
+        app, ["search", "--titles-only", query, "--file", str(TEST_DB_FILE)]
+    )
+    assert "ID 3:  PYTHON" in result.stdout
 
 
 def test_stats(db):

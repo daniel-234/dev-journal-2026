@@ -44,3 +44,18 @@ class JournalDatabase:
         journal_entries = self.load_entries()
         yield journal_entries
         self.save(journal_entries)
+
+
+def _entry_matches(query: str, entry: JournalEntry) -> bool:
+    """
+    Match the user query to title, content or tag in a given journal entry
+    """
+    query = query.lower()
+    if query in entry.title.lower():
+        return True
+    if query in entry.content.lower():
+        return True
+    # partial match of tags
+    if any(query in tag.lower() for tag in entry.tags):
+        return True
+    return False
