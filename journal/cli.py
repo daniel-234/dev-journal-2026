@@ -154,6 +154,18 @@ def display(
     console.print(table)
 
 
+def _entry_matches(query: str, entry: JournalEntry) -> bool:
+    query = query.lower()
+    if query in entry.title.lower():
+        return True
+    if query in entry.content.lower():
+        return True
+    # partial match of tags
+    if any(query in tag.lower() for tag in entry.tags):
+        return True
+    return False
+
+
 @app.command()
 def search(
     query: str,
@@ -185,23 +197,9 @@ def search(
                 raise typer.Exit()
         # If the option "titles_only" is False, show results from content and tags, as well
         else:
-            title_results = [
-                entry
-                for entry in journal_entries
-                if query.lower() in entry.title.lower()
+            search_results = [
+                entry for entry in journal_entries if _entry_matches(query, entry)
             ]
-            content_results = [
-                entry
-                for entry in journal_entries
-                if query.lower() in entry.content.lower() and entry not in title_results
-            ]
-            tags_results = [
-                entry
-                for entry in journal_entries
-                if any(query.lower() in tag.lower() for tag in entry.tags)
-                and entry not in content_results
-            ]
-            search_results = title_results + content_results + tags_results
             if not search_results:
                 print(f"No match for {query} in journal.")
                 raise typer.Exit()
