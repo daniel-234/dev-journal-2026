@@ -230,11 +230,8 @@ def stats(file: Path = DEFAULT_DB_FILE) -> None:
         total = len(journal_entries)
         print(f"\nNumber of entries: {total}")
         print("-" * 50)
-        tags = []
-        contents_length = []
-        for entry in journal_entries:
-            tags = tags + [tag for tag in entry.tags]
-            contents_length.append(len(entry.content))
+        tags = [tag for entry in journal_entries for tag in entry.tags]
+        contents_length = [len(entry.content) for entry in journal_entries]
         by_tag = Counter(tags).most_common()
         print("\nCounts by tag: \n")
         for value, count in by_tag:
