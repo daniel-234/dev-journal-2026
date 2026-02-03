@@ -34,4 +34,5 @@ exclude = [
 [tool.coverage.run]
 omit = [
     "journal/__main__.py",
+    "journal/console.py",
 ]
