@@ -50,6 +50,10 @@ class JournalEntry:
         entry_id = next_entry_id(existing_entries)
         return cls(id=entry_id, title=title, content=content)
 
+    @property
+    def formatted_timestamp(self) -> str:
+        return datetime.fromisoformat(self.timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
 
 def next_entry_id(existing_entries: list[JournalEntry]) -> str:
     """

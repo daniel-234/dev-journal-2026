@@ -5,7 +5,7 @@ from typing import Annotated
 import typer
 from faker import Faker
 
-from journal.console import console, table
+from journal.console import console, make_table
 from journal.db import JournalDatabase
 from journal.models import (
     CONTENT_LENGTH,
@@ -35,7 +35,6 @@ def add(
 
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Use the context manager to load and save the entries
     with db.session() as journal_entries:
@@ -61,7 +60,6 @@ def edit(
     Edit an entry content given its ID.
     """
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
     with db.session() as journal_entries:
@@ -94,7 +92,6 @@ def delete(
     Delete an entry given its ID.
     """
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
     with db.session() as journal_entries:
@@ -125,7 +122,6 @@ def display(
     Print all journal entries to the console.
     """
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Load entries
     with db.session() as journal_entries:
@@ -146,14 +142,14 @@ def display(
                     for query_tag in tags
                 )
             ]
+        table = make_table()
         for entry in journal_entries:
-            time = f"{entry.timestamp[:4]}-{entry.timestamp[5:7]}-{entry.timestamp[8:10]} {entry.timestamp[11:13]}:{entry.timestamp[14:16]}:{entry.timestamp[17:19]}"
             table.add_row(
                 entry.id,
                 entry.title.title(),
                 entry.content,
                 ", ".join(entry.tags),
-                time,
+                entry.formatted_timestamp,
             )
     console.print(table)
 
@@ -186,6 +182,7 @@ def search(
             ]
             if not search_results:
                 print(f"No match for {query} with option --titles-only in journal.")
+                raise typer.Exit()
         # If the option "titles_only" is False, show results from content and tags, as well
         else:
             title_results = [
@@ -206,7 +203,7 @@ def search(
             ]
             search_results = title_results + content_results + tags_results
             if not search_results:
-                typer.echo(f"No match for {query} in journal.")
+                print(f"No match for {query} in journal.")
                 raise typer.Exit()
         for entry in search_results:
             print("\n")
@@ -229,14 +226,12 @@ def stats(file: Path = DEFAULT_DB_FILE) -> None:
     with db.session() as journal_entries:
         if not journal_entries:
             print("No entries yet in Dev Journal.")
+            raise typer.Exit()
         total = len(journal_entries)
         print(f"\nNumber of entries: {total}")
         print("-" * 50)
-        tags = []
-        contents_length = []
-        for entry in journal_entries:
-            tags = tags + [tag for tag in entry.tags]
-            contents_length.append(len(entry.content))
+        tags = [tag for entry in journal_entries for tag in entry.tags]
+        contents_length = [len(entry.content) for entry in journal_entries]
         by_tag = Counter(tags).most_common()
         print("\nCounts by tag: \n")
         for value, count in by_tag:
