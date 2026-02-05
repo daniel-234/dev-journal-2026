@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+import typer
+
 TITLE_LENGTH = 30
 CONTENT_LENGTH = 70
 MAX_ID = 99999
-FIRST_ID = "00001"
+FIRST_ID = "1"
 
 
 class EntryAlreadyExists(Exception):
@@ -46,9 +48,14 @@ class JournalEntry:
         cls, title: str, content: str, existing_entries: list["JournalEntry"]
     ) -> "JournalEntry":
         if any(entry.title.lower() == title.lower() for entry in existing_entries):
-            raise EntryAlreadyExists("An entry with this title already exists.")
+            print("An entry with this title already exists.")
+            raise typer.Exit()
         entry_id = next_entry_id(existing_entries)
         return cls(id=entry_id, title=title, content=content)
+
+    @property
+    def formatted_timestamp(self) -> str:
+        return datetime.fromisoformat(self.timestamp).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def next_entry_id(existing_entries: list[JournalEntry]) -> str:
@@ -64,4 +71,4 @@ def next_entry_id(existing_entries: list[JournalEntry]) -> str:
         raise MaximumNumberOfEntries(
             "You have already reached the maximum number of entries. Please, delete one before adding this new entry."
         )
-    return f"{max_id + 1:05d}"
+    return f"{max_id + 1}"

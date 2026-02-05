@@ -7,12 +7,14 @@ requires-python = ">=3.13"
 dependencies = [
     "faker>=40.1.0",
     "pydantic>=2.12.5",
+    "rich>=14.2.0",
     "typer>=0.21.0",
 ]
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
 ]
 
 [project.scripts]
@@ -27,4 +29,10 @@ include = ["journal/"]
 exclude = [
   "/.*",
   "/tests"
+]
+
+[tool.coverage.run]
+omit = [
+    "journal/__main__.py",
+    "journal/console.py",
 ]

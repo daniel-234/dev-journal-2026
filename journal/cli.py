@@ -5,7 +5,8 @@ from typing import Annotated
 import typer
 from faker import Faker
 
-from journal.db import JournalDatabase
+from journal.console import console, make_table
+from journal.db import JournalDatabase, _entry_matches
 from journal.models import (
     CONTENT_LENGTH,
     TITLE_LENGTH,
@@ -34,7 +35,6 @@ def add(
 
     tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Use the context manager to load and save the entries
     with db.session() as journal_entries:
@@ -60,7 +60,6 @@ def edit(
     Edit an entry content given its ID.
     """
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
     with db.session() as journal_entries:
@@ -93,15 +92,13 @@ def delete(
     Delete an entry given its ID.
     """
 
-    if not entry_id:
-        raise ValueError("No ID typed.")
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Load the entries from the dev journal, if any.
     with db.session() as journal_entries:
-        if not any(entry_id in entry.id for entry in journal_entries):
+        if not any(entry_id == entry.id for entry in journal_entries):
             # If there is no entry with this ID, print a message to the screen.
             print("No entry was found with this ID")
+            raise typer.Exit()
         else:
             # Iterate through the dictionaries in the journal_entries list.
             # Check if the ID passed by the user is found in an entry value.
@@ -125,7 +122,6 @@ def display(
     Print all journal entries to the console.
     """
 
-    # Instantiate a Database object
     db = JournalDatabase(file)
     # Load entries
     with db.session() as journal_entries:
@@ -134,7 +130,7 @@ def display(
             print("No entries yet in Dev Journal.")
             raise typer.Exit()
         journal_entries = sorted(
-            journal_entries, key=lambda entry: entry.id, reverse=True
+            journal_entries, key=lambda entry: int(entry.id), reverse=True
         )
         if tags:
             # Match an entry from entries if any given 'query_tag' in the given tags list is a tag to that entry
@@ -146,14 +142,16 @@ def display(
                     for query_tag in tags
                 )
             ]
+        table = make_table()
         for entry in journal_entries:
-            print("\n")
-            print("-" * 70)
-            print(f"ID {entry.id}:  {entry.title.upper()} - ({entry.timestamp})")
-            print("-" * 70)
-            print(f"{entry.content}")
-            print("-" * 70)
-            print(f"tags: {entry.tags}\n")
+            table.add_row(
+                entry.id,
+                entry.title.title(),
+                entry.content,
+                ", ".join(entry.tags),
+                entry.formatted_timestamp,
+            )
+    console.print(table)
 
 
 @app.command()
@@ -171,6 +169,10 @@ def search(
     # Instantiate a Database object
     db = JournalDatabase(file)
     with db.session() as journal_entries:
+        # Print a message to the user to let know there's no entry yet
+        if not journal_entries:
+            print("No entries yet in Dev Journal.")
+            raise typer.Exit()
         # If the option "titles_ony" is True, limit the search results to titles
         if titles_only:
             search_results = [
@@ -178,26 +180,29 @@ def search(
                 for entry in journal_entries
                 if query.lower() in entry.title.lower()
             ]
+            if not search_results:
+                print(f"No match for {query} with option --titles-only in journal.")
+                raise typer.Exit()
         # If the option "titles_only" is False, show results from content and tags, as well
         else:
-            title_results = [
-                entry
-                for entry in journal_entries
-                if query.lower() in entry.title.lower()
+            search_results = [
+                entry for entry in journal_entries if _entry_matches(query, entry)
             ]
-            content_results = [
-                entry
-                for entry in journal_entries
-                if query.lower() in entry.content.lower() and entry not in title_results
-            ]
-            tags_results = [
-                entry
-                for entry in journal_entries
-                if any(query.lower() in tag.lower() for tag in entry.tags)
-                and entry not in content_results
-            ]
-            search_results = title_results + content_results + tags_results
+            if not search_results:
+                print(f"No match for {query} in journal.")
+                raise typer.Exit()
+        table = make_table()
+        for entry in search_results:
+            table.add_row(
+                entry.id,
+                entry.title.title(),
+                entry.content,
+                ", ".join(entry.tags),
+                entry.formatted_timestamp,
+            )
+        console.print(table)
 
+        """
         for entry in search_results:
             print("\n")
             print("-" * 70)
@@ -206,6 +211,7 @@ def search(
             print(f"{entry.content}")
             print("-" * 70)
             print(f"tags: {entry.tags}\n")
+        """
 
 
 @app.command()
@@ -223,11 +229,8 @@ def stats(file: Path = DEFAULT_DB_FILE) -> None:
         total = len(journal_entries)
         print(f"\nNumber of entries: {total}")
         print("-" * 50)
-        tags = []
-        contents_length = []
-        for entry in journal_entries:
-            tags = tags + [tag for tag in entry.tags]
-            contents_length.append(len(entry.content))
+        tags = [tag for entry in journal_entries for tag in entry.tags]
+        contents_length = [len(entry.content) for entry in journal_entries]
         by_tag = Counter(tags).most_common()
         print("\nCounts by tag: \n")
         for value, count in by_tag:
@@ -253,6 +256,7 @@ def populate(num_items: int, file: Path = DEFAULT_DB_FILE) -> None:
 
     if num_items > MAX_ITEMS:
         print(f"Please, choose a number of items not greater than {MAX_ITEMS}.")
+        raise typer.Exit()
     else:
         db = JournalDatabase(file)
         fake = Faker()

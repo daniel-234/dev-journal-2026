@@ -11,7 +11,6 @@ TEST_DB_FILE = Path("test_journal.json")
 
 @pytest.fixture(scope="function")
 def db():
-    # Instantiate a Database object
     db = JournalDatabase(TEST_DB_FILE)
     yield db
     db.save([])
